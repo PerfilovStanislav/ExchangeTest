@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	ps "github.com/PerfilovStanislav/go-raw-postgresql-builder"
-	sdk "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
+	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
 	"log"
@@ -16,10 +16,8 @@ import (
 )
 
 var token = "t.ZNcVav8ge3MFAbSb0Y2ccwd-a9bPBkxKaPf0Yr_wD3Fc5tUpj8LX6gAg4RLlAUcIZm-KFKnImNMpeQf-2CmlbA"
-var client *sdk.SandboxRestClient
-var streamClient *sdk.StreamingClient
-var apiCallCounter int32 = 0
-var err error
+var client *tf.SandboxRestClient
+var streamClient *tf.StreamingClient
 var logger *log.Logger
 
 type ListenCandleData struct {
@@ -35,9 +33,6 @@ var listenCandles = map[string]map[string]ListenCandleData{ // interval => figi 
 }
 
 func Download() {
-	rand.Seed(time.Now().UnixNano()) // инициируем Seed рандома для функции requestID
-
-	registerClient()
 	registerStreamClient()
 
 	initListening()
@@ -56,7 +51,7 @@ func initListening() {
 
 	for interval, candles := range listenCandles {
 		for figi, data := range candles {
-			err = Db.Get(&t,
+			err := Db.Get(&t,
 				ps.Sql{sql, struct{ StockIntervalId int64 }{data.StockIntervalId}}.String(),
 			)
 			if err != nil {
@@ -66,7 +61,7 @@ func initListening() {
 			candle.Time = t
 			listenCandles[interval][figi] = candle
 
-			err = streamClient.SubscribeCandle(figi, sdk.CandleInterval(interval), requestID())
+			err = streamClient.SubscribeCandle(figi, tf.CandleInterval(interval), requestID())
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -75,13 +70,13 @@ func initListening() {
 }
 
 func registerClient() {
-	client = sdk.NewSandboxRestClient(token)
+	client = tf.NewSandboxRestClient(token)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
 
 	log.Println("Регистрация обычного счета в песочнице")
-	account, err := client.Register(ctx, sdk.AccountTinkoff)
+	account, err := client.Register(ctx, tf.AccountTinkoff)
 	if err != nil {
 		log.Fatalln(errorHandle(err))
 	}
@@ -91,7 +86,8 @@ func registerClient() {
 func registerStreamClient() {
 	logger = log.New(os.Stdout, "*", log.LstdFlags)
 
-	streamClient, err = sdk.NewStreamingClient(logger, token)
+	var err error
+	streamClient, err = tf.NewStreamingClient(logger, token)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -100,7 +96,7 @@ func registerStreamClient() {
 		err = streamClient.RunReadLoop(func(event interface{}) error {
 			logger.Printf("Got event %+v", event)
 			switch sdkEvent := event.(type) {
-			case sdk.CandleEvent:
+			case tf.CandleEvent:
 				newCandleEvent(&sdkEvent.Candle)
 				return nil
 			default:
@@ -115,7 +111,7 @@ func registerStreamClient() {
 	}()
 }
 
-func newCandleEvent(c *sdk.Candle) {
+func newCandleEvent(c *tf.Candle) {
 	data := listenCandles[string(c.Interval)][c.FIGI]
 	if data.Time == c.TS {
 		return
@@ -124,34 +120,43 @@ func newCandleEvent(c *sdk.Candle) {
 		strconv.FormatInt(data.StockIntervalId, 10) +
 		", $TS, $OpenPrice, $ClosePrice, $HighPrice, $LowPrice, $Volume", c,
 	}
-	_, err = Db.Exec(sql.String())
+	_, err := Db.Exec(sql.String())
 	if err != nil {
 		log.Fatalln(err)
 	}
 }
 
 func downloadCandlesByFigi(figi string) {
+	CandleIndicatorStorage[figi] = make(map[tf.CandleInterval]CandleIndicatorData)
+	data := &CandleIndicatorData{}
+
+	data.Indicators = make(map[IndicatorType]map[float64]Bars)
+	data.Indicators[IndicatorTypeSma] = make(map[float64]Bars)
+	data.Indicators[IndicatorTypeEma] = make(map[float64]Bars)
+	data.Indicators[IndicatorTypeDema] = make(map[float64]Bars)
+	data.Indicators[IndicatorTypeAma] = make(map[float64]Bars)
+
 	now := time.Now().AddDate(0, 0, 7)
 	start := now.AddDate(-3, 0, 0)
+	var apiCallCounter = 0
 	for start.Before(now) {
-
 		apiCallCounter += 1
 		if apiCallCounter > 490 {
 			fmt.Println("Sleep")
-			time.Sleep(time.Second * time.Duration(60*2))
+			time.Sleep(time.Minute * time.Duration(2))
 			apiCallCounter = 1
 		}
 
-		downloadCandles(start, figi)
+		downloadCandles(start, figi, data)
 		start = start.AddDate(0, 0, 7)
 	}
 }
 
-func downloadCandles(tm time.Time, figi string) {
+func downloadCandles(tm time.Time, figi string, data *CandleIndicatorData) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
 
-	candles, err := client.Candles(ctx, tm.AddDate(0, 0, -7), tm, sdk.CandleInterval1Hour, figi)
+	candles, err := client.Candles(ctx, tm.AddDate(0, 0, -7), tm, tf.CandleInterval1Hour, figi)
 	if err != nil {
 		fmt.Sprintln(err)
 		log.Fatalln(err)
@@ -161,17 +166,16 @@ func downloadCandles(tm time.Time, figi string) {
 		return
 	}
 
-	sql := ps.Sql{
-		"INSERT INTO candles(stock_interval_id, time, o, c, h, l, v) VALUES $Values",
-		struct{ Values ps.Sql }{
-			ps.Sql{Query: "\n(2, $TS, $OpenPrice, $ClosePrice, $HighPrice, $LowPrice, $Volume)", Data: candles},
-		},
+	for _, candle := range candles {
+		data.Time = append(data.Time, candle.TS)
+		data.Candles.O = append(data.Candles.O, candle.OpenPrice)
+		data.Candles.C = append(data.Candles.C, candle.ClosePrice)
+		data.Candles.H = append(data.Candles.H, candle.HighPrice)
+		data.Candles.L = append(data.Candles.L, candle.LowPrice)
 	}
-	result, err := Db.Exec(sql.String())
-	if err != nil {
-		fmt.Println(result, sql)
-		panic(err)
-	}
+	CandleIndicatorStorage[figi][tf.CandleInterval1Hour] = *data
+	fmt.Printf("Кол-во свечей: %d\n", len(CandleIndicatorStorage[figi][tf.CandleInterval1Hour].Time))
+
 }
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -191,7 +195,7 @@ func errorHandle(err error) error {
 		return nil
 	}
 
-	if tradingErr, ok := err.(sdk.TradingError); ok {
+	if tradingErr, ok := err.(tf.TradingError); ok {
 		if tradingErr.InvalidTokenSpace() {
 			tradingErr.Hint = "Do you use sandbox token in production environment or vise verse?"
 			return tradingErr

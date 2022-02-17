@@ -5,7 +5,6 @@ import (
 	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
-	"log"
 	"time"
 	//_ "github.com/lib/pq"
 )
@@ -24,16 +23,16 @@ var IndicatorTypes = []IndicatorType{
 	IndicatorTypeSma, IndicatorTypeEma, IndicatorTypeDema, IndicatorTypeAma,
 }
 
-type Candle struct {
-	Id   int64
-	Time time.Time
-	O    float64
-	C    float64
-	H    float64
-	L    float64
-	V    int
-	Rn   int
-}
+//type Candle struct {
+//	Id   int64
+//	Time time.Time
+//	O    float64
+//	C    float64
+//	H    float64
+//	L    float64
+//	V    int
+//	Rn   int
+//}
 
 type Bars struct {
 	O []float64
@@ -56,44 +55,44 @@ type CandleIndicatorData struct {
 
 var CandleIndicatorStorage map[string]map[tf.CandleInterval]CandleIndicatorData
 
-func CandlesMain() {
-	fillCandlesFromDb()
-	fillIndicators()
-}
+//func CandlesMain(figi string) {
+//	fillCandlesFromDb(figi)
+//	fillIndicators(figi)
+//}
 
-func fillCandlesFromDb() int {
-	var candles []Candle
-	sql := "SELECT id, time, o, c, h, l, v, rn FROM candles WHERE stock_interval_id = 1"
-	if err = Db.Select(&candles, sql); err != nil {
-		log.Panic(err, sql)
-	}
+//func fillCandlesFromDb(figi string) int {
+//	var candles []Candle
+//	sql := "SELECT id, time, o, c, h, l, v, rn FROM candles WHERE stock_interval_id = 1"
+//	if err = Db.Select(&candles, sql); err != nil {
+//		log.Panic(err, sql)
+//	}
+//
+//	CandleIndicatorStorage = make(map[string]map[tf.CandleInterval]CandleIndicatorData)
+//	CandleIndicatorStorage[figi] = make(map[tf.CandleInterval]CandleIndicatorData)
+//
+//	data := CandleIndicatorData{}
+//	c := &data.Candles
+//
+//	data.Indicators = make(map[IndicatorType]map[float64]Bars)
+//	data.Indicators[IndicatorTypeSma] = make(map[float64]Bars)
+//	data.Indicators[IndicatorTypeEma] = make(map[float64]Bars)
+//	data.Indicators[IndicatorTypeDema] = make(map[float64]Bars)
+//	data.Indicators[IndicatorTypeAma] = make(map[float64]Bars)
+//
+//	for _, row := range candles {
+//		data.Time = append(data.Time, row.Time)
+//		c.O = append(c.O, row.O)
+//		c.C = append(c.C, row.C)
+//		c.H = append(c.H, row.H)
+//		c.L = append(c.L, row.L)
+//	}
+//	CandleIndicatorStorage[figi][tf.CandleInterval1Hour] = data
+//
+//	return 0
+//}
 
-	CandleIndicatorStorage = make(map[string]map[tf.CandleInterval]CandleIndicatorData)
-	CandleIndicatorStorage["BBG000B9XRY4"] = make(map[tf.CandleInterval]CandleIndicatorData)
-
-	data := CandleIndicatorData{}
-	c := &data.Candles
-
-	data.Indicators = make(map[IndicatorType]map[float64]Bars)
-	data.Indicators[IndicatorTypeSma] = make(map[float64]Bars)
-	data.Indicators[IndicatorTypeEma] = make(map[float64]Bars)
-	data.Indicators[IndicatorTypeDema] = make(map[float64]Bars)
-	data.Indicators[IndicatorTypeAma] = make(map[float64]Bars)
-
-	for _, row := range candles {
-		data.Time = append(data.Time, row.Time)
-		c.O = append(c.O, row.O)
-		c.C = append(c.C, row.C)
-		c.H = append(c.H, row.H)
-		c.L = append(c.L, row.L)
-	}
-	CandleIndicatorStorage["BBG000B9XRY4"][tf.CandleInterval1Hour] = data
-
-	return 0
-}
-
-func fillIndicators() {
-	v := CandleIndicatorStorage["BBG000B9XRY4"][tf.CandleInterval1Hour]
+func fillIndicators(figi string) {
+	v := CandleIndicatorStorage[figi][tf.CandleInterval1Hour]
 	l := len(v.Candles.O)
 
 	ind := Bars{}

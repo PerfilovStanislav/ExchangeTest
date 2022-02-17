@@ -1,25 +1,29 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
-	"github.com/joho/godotenv"
+	_ "github.com/jackc/pgx"
+	_ "github.com/jackc/pgx/stdlib"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
 	"runtime/pprof"
-
-	_ "github.com/jackc/pgx"
-	_ "github.com/jackc/pgx/stdlib"
+	"time"
 )
 
 const StartDeposit = float64(10000.0)
 const Comission = float64(0.06)
 
 func main() {
-	// BBG000B9XRY4 - apple
-	_ = godotenv.Load()
-	ConnectDb()
-	defer Db.Close()
+	//_ = godotenv.Load()
+	//ConnectDb()
+	//defer Db.Close()
+
+	figi := flag.String("figi", "BBG000B9XRY4", "example: BBG000B9XRY4")
+	flag.Parse()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
@@ -31,22 +35,23 @@ func main() {
 		}
 	}()
 
-	CandlesMain()
-	testing()
+	CandleIndicatorStorage = make(map[string]map[tf.CandleInterval]CandleIndicatorData)
+
+	rand.Seed(time.Now().UnixNano()) // инициируем Seed рандома для функции requestID
+	registerClient()
+	downloadCandlesByFigi(*figi)
+	fillIndicators(*figi)
+	test(*figi)
+
 }
 
-func testing() {
-	test()
-	//debug(maxRn, 131, 130, 1.0, 1.0400009, 4, 3)
-}
+func test(figi string) {
+	storage := CandleIndicatorStorage[figi][tf.CandleInterval1Hour]
 
-func test() {
-	storage := CandleIndicatorStorage["BBG000B9XRY4"][tf.CandleInterval1Hour]
+	var op, cl, wallet, openedPrice float64
+	var maxSpeed = 0.0
 
-	var op, cl, wallet, maxWallet, openedPrice float64
-	maxWallet = 0.0
-
-	for op = 1; op < 1.015; op += 0.00125 { // 0.00005
+	for op = 1; op < 1.015; op += 0.00125 {
 		for cl = 1.0; cl < 1.1; cl += 0.00125 {
 			for a := 1; a <= 4; a++ {
 				for b := 1; b <= 4; b++ {
@@ -91,9 +96,9 @@ func test() {
 										wallet += (openedPrice + Comission) * float64(openedCnt)
 									}
 
-									if wallet > maxWallet {
-										maxWallet = wallet
-										log.Println(int(maxWallet), op, cl, a, b, indicatorType1, coef1, indicatorType2, coef2, cnt, rnSum)
+									if rnSum != 0.0 && wallet/float64(rnSum) > maxSpeed {
+										maxSpeed = wallet / float64(rnSum)
+										log.Println(wallet, rnSum, op, cl, a, b, indicatorType1, coef1, indicatorType2, coef2, cnt, rnSum)
 									}
 
 								}
@@ -103,6 +108,7 @@ func test() {
 				}
 			}
 		}
+		fmt.Println("===\n")
 	}
 }
 
