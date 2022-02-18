@@ -135,6 +135,7 @@ func downloadCandlesByFigi(figi string) {
 	data.Indicators[IndicatorTypeEma] = make(map[float64]Bars)
 	data.Indicators[IndicatorTypeDema] = make(map[float64]Bars)
 	data.Indicators[IndicatorTypeAma] = make(map[float64]Bars)
+	data.Indicators[IndicatorTypeTema] = make(map[float64]Bars)
 
 	now := time.Now().AddDate(0, 0, 7)
 	start := now.AddDate(-3, 0, 0)

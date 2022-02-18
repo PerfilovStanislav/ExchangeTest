@@ -20,19 +20,8 @@ const (
 )
 
 var IndicatorTypes = []IndicatorType{
-	IndicatorTypeSma, IndicatorTypeEma, IndicatorTypeDema, IndicatorTypeAma,
+	IndicatorTypeSma, IndicatorTypeEma, IndicatorTypeDema, IndicatorTypeAma, IndicatorTypeTema,
 }
-
-//type Candle struct {
-//	Id   int64
-//	Time time.Time
-//	O    float64
-//	C    float64
-//	H    float64
-//	L    float64
-//	V    int
-//	Rn   int
-//}
 
 type Bars struct {
 	O []float64
@@ -41,12 +30,6 @@ type Bars struct {
 	L []float64
 }
 
-//type Indicators struct {
-//	Bars
-//	N    int64
-//	Coef float64
-//}
-
 type CandleIndicatorData struct {
 	Time       []time.Time
 	Candles    Bars
@@ -54,42 +37,6 @@ type CandleIndicatorData struct {
 }
 
 var CandleIndicatorStorage map[string]map[tf.CandleInterval]CandleIndicatorData
-
-//func CandlesMain(figi string) {
-//	fillCandlesFromDb(figi)
-//	fillIndicators(figi)
-//}
-
-//func fillCandlesFromDb(figi string) int {
-//	var candles []Candle
-//	sql := "SELECT id, time, o, c, h, l, v, rn FROM candles WHERE stock_interval_id = 1"
-//	if err = Db.Select(&candles, sql); err != nil {
-//		log.Panic(err, sql)
-//	}
-//
-//	CandleIndicatorStorage = make(map[string]map[tf.CandleInterval]CandleIndicatorData)
-//	CandleIndicatorStorage[figi] = make(map[tf.CandleInterval]CandleIndicatorData)
-//
-//	data := CandleIndicatorData{}
-//	c := &data.Candles
-//
-//	data.Indicators = make(map[IndicatorType]map[float64]Bars)
-//	data.Indicators[IndicatorTypeSma] = make(map[float64]Bars)
-//	data.Indicators[IndicatorTypeEma] = make(map[float64]Bars)
-//	data.Indicators[IndicatorTypeDema] = make(map[float64]Bars)
-//	data.Indicators[IndicatorTypeAma] = make(map[float64]Bars)
-//
-//	for _, row := range candles {
-//		data.Time = append(data.Time, row.Time)
-//		c.O = append(c.O, row.O)
-//		c.C = append(c.C, row.C)
-//		c.H = append(c.H, row.H)
-//		c.L = append(c.L, row.L)
-//	}
-//	CandleIndicatorStorage[figi][tf.CandleInterval1Hour] = data
-//
-//	return 0
-//}
 
 func fillIndicators(figi string) {
 	v := CandleIndicatorStorage[figi][tf.CandleInterval1Hour]
@@ -113,7 +60,7 @@ func fillIndicators(figi string) {
 	}
 
 	fmt.Println("Start IndicatorTypeEma")
-	for coef := 0.03; coef <= 0.68; coef += 0.05 {
+	for coef := 0.03; coef <= 0.7; coef += 0.01 {
 		for index := 0; index < l; index++ {
 			ind.O[index] = calculateEma(coef, index, v.Candles.O)
 			ind.C[index] = calculateEma(coef, index, v.Candles.C)
@@ -124,7 +71,7 @@ func fillIndicators(figi string) {
 	}
 
 	fmt.Println("Start IndicatorTypeDema")
-	for coef := 0.03; coef <= 0.68; coef += 0.05 {
+	for coef := 0.03; coef <= 0.7; coef += 0.01 {
 		for index := 0; index < l; index++ {
 			ind.O[index] = calculateDema(coef, index, v.Indicators[IndicatorTypeEma][coef].O)
 			ind.C[index] = calculateDema(coef, index, v.Indicators[IndicatorTypeEma][coef].C)
@@ -135,7 +82,7 @@ func fillIndicators(figi string) {
 	}
 
 	fmt.Println("Start IndicatorTypeAma")
-	for coef := 0.03; coef <= 0.68; coef += 0.05 {
+	for coef := 0.03; coef <= 0.7; coef += 0.01 {
 		for index := 0; index < l; index++ {
 			ind.O[index] = calculateAma(coef, index, v.Candles.O)
 			ind.C[index] = calculateAma(coef, index, v.Candles.C)
@@ -143,6 +90,17 @@ func fillIndicators(figi string) {
 			ind.L[index] = calculateAma(coef, index, v.Candles.L)
 		}
 		v.Indicators[IndicatorTypeAma][coef] = ind
+	}
+
+	fmt.Println("Start IndicatorTypeTema")
+	for coef := 0.03; coef <= 0.7; coef += 0.01 {
+		for index := 0; index < l; index++ {
+			ind.O[index] = calculateTema(coef, index, v.Indicators[IndicatorTypeEma][coef].O, v.Indicators[IndicatorTypeDema][coef].O)
+			ind.C[index] = calculateTema(coef, index, v.Indicators[IndicatorTypeEma][coef].C, v.Indicators[IndicatorTypeDema][coef].C)
+			ind.H[index] = calculateTema(coef, index, v.Indicators[IndicatorTypeEma][coef].H, v.Indicators[IndicatorTypeDema][coef].H)
+			ind.L[index] = calculateTema(coef, index, v.Indicators[IndicatorTypeEma][coef].L, v.Indicators[IndicatorTypeDema][coef].L)
+		}
+		v.Indicators[IndicatorTypeTema][coef] = ind
 	}
 }
 
@@ -166,11 +124,11 @@ func calculateEma(coef float64, index int, cv []float64) float64 {
 	return cv[index]*coef + (1.0-coef)*calculateEma(coef, index-1, cv)
 }
 
-func calculateDema(coef float64, index int, cv []float64) float64 {
+func calculateDema(coef float64, index int, emaV []float64) float64 {
 	if index == 0 {
-		return cv[0]
+		return emaV[0]
 	}
-	return 2*cv[index] - calculateEma(coef, index, cv)
+	return 2*emaV[index] - calculateEma(coef, index, emaV)
 }
 
 func calculateAma(coef float64, index int, cv []float64) float64 {
@@ -178,6 +136,13 @@ func calculateAma(coef float64, index int, cv []float64) float64 {
 		return cv[0]
 	}
 	return cv[index]*coef*coef + (1-coef*coef)*calculateAma(coef, index-1, cv)
+}
+
+func calculateTema(coef float64, index int, emaV []float64, demaV []float64) float64 {
+	if index == 0 {
+		return 4*emaV[0] - 3*demaV[0]
+	}
+	return 3*emaV[index] - 3*demaV[index] + calculateEma(coef, index, demaV)
 }
 
 //func (sma Indicators) Calculate(index int64) float64 {
