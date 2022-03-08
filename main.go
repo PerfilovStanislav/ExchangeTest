@@ -1,18 +1,22 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/gob"
 	"flag"
 	"fmt"
 	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
+	"github.com/fatih/color"
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
+	"io/ioutil"
 	"log"
-	"math/rand"
+	"os"
 	"sync"
-	"time"
 )
 
-const StartDeposit = float64(10000.0)
+const StartDeposit = float64(100000.0)
 const Comission = float64(0.06)
 
 func main() {
@@ -34,13 +38,72 @@ func main() {
 	//}()
 
 	CandleIndicatorStorage = make(map[string]map[tf.CandleInterval]CandleIndicatorData)
+	restoreStorage()
 
-	rand.Seed(time.Now().UnixNano()) // инициируем Seed рандома для функции requestID
-	registerClient()
-	downloadCandlesByFigi(*figi)
-	fillIndicators(*figi)
+	//rand.Seed(time.Now().UnixNano()) // инициируем Seed рандома для функции requestID
+	//registerClient()
+	//downloadCandlesByFigi(*figi)
+	//fillIndicators(*figi)
 	test(*figi)
 
+	//backupStorage()
+}
+
+func EncodeToBytes(p interface{}) []byte {
+	buf := bytes.Buffer{}
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(p)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("uncompressed size (bytes): ", len(buf.Bytes()))
+	return buf.Bytes()
+}
+
+func Compress(s []byte) []byte {
+
+	zipbuf := bytes.Buffer{}
+	zipped := gzip.NewWriter(&zipbuf)
+	zipped.Write(s)
+	zipped.Close()
+	fmt.Println("compressed size (bytes): ", len(zipbuf.Bytes()))
+	return zipbuf.Bytes()
+}
+
+func Decompress(s []byte) []byte {
+	rdr, _ := gzip.NewReader(bytes.NewReader(s))
+	data, err := ioutil.ReadAll(rdr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	rdr.Close()
+	fmt.Println("uncompressed size (bytes): ", len(data))
+	return data
+}
+
+func restoreStorage() {
+	dataIn := Decompress(ReadFromFile("storage.dat"))
+	dec := gob.NewDecoder(bytes.NewReader(dataIn))
+	_ = dec.Decode(&CandleIndicatorStorage)
+}
+
+func backupStorage() {
+	dataOut := Compress(EncodeToBytes(CandleIndicatorStorage))
+	_ = ioutil.WriteFile("storage.dat", dataOut, 0644)
+}
+
+func ReadFromFile(path string) []byte {
+	f, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	data, err := ioutil.ReadAll(f)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return data
 }
 
 func test(figi string) {
@@ -50,7 +113,7 @@ func test(figi string) {
 	var maxWallet = 0.0
 
 	var wg sync.WaitGroup
-	for op := 1.0; op < 1.025; op += 0.00025 {
+	for op := 1.0; op < 1.0050; op += 0.0005 {
 		wg.Add(1)
 		go testOp(&wg, &maxSpeed, &maxWallet, op, &storage)
 	}
@@ -60,11 +123,12 @@ func test(figi string) {
 func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float64, storage *CandleIndicatorData) {
 	defer wg.Done()
 
-	var cl, wallet, openedPrice float64
+	var cl, wallet, openedPrice, speed float64
+	show := false
 
-	for cl = 1.0; cl < 1.1; cl += 0.00125 {
-		for a := 1; a <= 4; a++ {
-			for b := 1; b <= 4; b++ {
+	for _, iType1 := range BarTypes {
+		for cl = 1.0; cl < 1.1; cl += 0.00125 {
+			for _, iType2 := range BarTypes {
 				for _, indicatorType1 := range IndicatorTypes {
 					indicators1 := storage.Indicators[indicatorType1]
 					for coef1, bars1 := range indicators1 {
@@ -85,14 +149,14 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 									}
 
 									if openedCnt == 0 {
-										if getIndicator(bars1, a)[i-1]/getIndicator(bars2, b)[i-1] >= op {
-											openedPrice = storage.Candles.O[i]
-											openedCnt = int(wallet / openedPrice) // - 1
+										if bars1[iType1][i-1]/bars2[iType2][i-1] >= op {
+											openedPrice = storage.Candles["O"][i]
+											openedCnt = int(wallet / openedPrice)
 											wallet -= (Comission + openedPrice) * float64(openedCnt)
 											rnOpen = i
 										}
-									} else if storage.Candles.O[i]/openedPrice >= cl {
-										wallet += storage.Candles.O[i] * float64(openedCnt)
+									} else if storage.Candles["O"][i]/openedPrice >= cl {
+										wallet += storage.Candles["O"][i] * float64(openedCnt)
 										if wallet <= StartDeposit*0.85 {
 											break
 										}
@@ -106,15 +170,41 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 									wallet += (openedPrice + Comission) * float64(openedCnt)
 								}
 
-								if rnSum != 0.0 && (wallet-StartDeposit)/float64(rnSum) > *maxSpeed {
-									*maxSpeed = (wallet - StartDeposit) / float64(rnSum)
-									log.Println(wallet, rnSum, maxSpeed, op, cl, a, b, indicatorType1, coef1, indicatorType2, coef2, cnt, rnSum)
+								speed = (wallet - StartDeposit) / float64(rnSum)
+								if cnt >= 10 && rnSum != 0.0 {
+									if speed > (*maxSpeed)*0.9 {
+										show = true
+										if speed > *maxSpeed {
+											*maxSpeed = speed
+										}
+									}
 								}
 
 								if wallet-StartDeposit > *maxWallet {
 									*maxWallet = wallet
-									log.Println(wallet, rnSum, op, cl, a, b, indicatorType1, coef1, indicatorType2, coef2, cnt, rnSum)
+									show = true
 								}
+
+								if show {
+									fmt.Printf("%s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s] \n️️",
+										color.New(color.FgHiGreen).Sprint(int(wallet)),
+										color.New(color.BgBlue).Sprintf("%4d", cnt),
+										color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
+										color.New(color.FgHiRed).Sprintf("%7.2f", speed),
+										color.New(color.BgHiGreen).Sprintf("%.4f", op),
+										color.New(color.BgHiRed).Sprintf("%.5f", cl),
+
+										color.New(color.FgHiBlue).Sprintf("%4s", indicatorType1),
+										color.New(color.FgWhite).Sprint(iType1),
+										color.New(color.FgHiWhite).Sprintf("%5.2f", coef1),
+
+										color.New(color.FgHiBlue).Sprintf("%4s", indicatorType2),
+										color.New(color.FgWhite).Sprint(iType2),
+										color.New(color.FgHiWhite).Sprintf("%5.2f", coef2),
+									)
+								}
+
+								show = false
 
 							}
 						}
@@ -124,18 +214,4 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 		}
 	}
 	fmt.Println("===\n")
-}
-
-func getIndicator(bars Bars, x int) []float64 {
-	switch x {
-	case 1:
-		return bars.C
-	case 2:
-		return bars.O
-	case 3:
-		return bars.H
-	case 4:
-		return bars.L
-	}
-	return nil
 }

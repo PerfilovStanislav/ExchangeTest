@@ -5,6 +5,7 @@ import (
 	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
+	"math"
 	"time"
 	//_ "github.com/lib/pq"
 )
@@ -12,15 +13,22 @@ import (
 type IndicatorType string
 
 const (
-	IndicatorTypeSma  IndicatorType = "sma"
-	IndicatorTypeEma  IndicatorType = "ema"
-	IndicatorTypeDema IndicatorType = "dema"
-	IndicatorTypeAma  IndicatorType = "ama"
-	IndicatorTypeTema IndicatorType = "tema"
+	IndicatorTypeStas        IndicatorType = "stas"
+	IndicatorTypeSma         IndicatorType = "sma"
+	IndicatorTypeEma         IndicatorType = "ema"
+	IndicatorTypeDema        IndicatorType = "dema"
+	IndicatorTypeTema        IndicatorType = "tema"
+	IndicatorTypeTemaZeroLag IndicatorType = "zero"
+	//IndicatorTypeAma         IndicatorType = "ama"
 )
 
 var IndicatorTypes = []IndicatorType{
-	IndicatorTypeSma, IndicatorTypeEma, IndicatorTypeDema, IndicatorTypeAma, IndicatorTypeTema,
+	IndicatorTypeStas, IndicatorTypeSma, IndicatorTypeEma, IndicatorTypeDema, IndicatorTypeTema,
+	IndicatorTypeTemaZeroLag,
+}
+
+var BarTypes = []string{
+	"O", "C", "H", "L",
 }
 
 type Bars struct {
@@ -32,118 +40,177 @@ type Bars struct {
 
 type CandleIndicatorData struct {
 	Time       []time.Time
-	Candles    Bars
-	Indicators map[IndicatorType]map[float64]Bars // IndicatorTypeSma[N=3 OR coef=0.5]Bars
+	Candles    map[string][]float64
+	Indicators map[IndicatorType]map[float64]map[string][]float64 // IndicatorTypeSma[N=3 OR coef=0.5]Bars
 }
 
 var CandleIndicatorStorage map[string]map[tf.CandleInterval]CandleIndicatorData
 
 func fillIndicators(figi string) {
 	v := CandleIndicatorStorage[figi][tf.CandleInterval1Hour]
-	l := len(v.Candles.O)
+	l := len(v.Time)
 
-	ind := Bars{}
-	ind.O = make([]float64, l, l)
-	ind.C = make([]float64, l, l)
-	ind.H = make([]float64, l, l)
-	ind.L = make([]float64, l, l)
+	for _, indicatorType := range IndicatorTypes {
+		v.Indicators[indicatorType] = make(map[float64]map[string][]float64)
+	}
 
-	fmt.Println("Start IndicatorTypeSma")
+	fmt.Println("Start: ", IndicatorTypeStas)
+	for n := 5; n <= 70; n++ {
+		coef := float64(n)
+		v.Indicators[IndicatorTypeStas][coef] = make(map[string][]float64)
+		for _, barType := range BarTypes {
+			v.Indicators[IndicatorTypeStas][coef][barType], _ = calculateStas(n, l, v.Candles[barType])
+		}
+	}
+
+	fmt.Println("Start: ", IndicatorTypeSma)
 	for n := 3; n <= 70; n++ {
-		for index := 0; index < l; index++ {
-			ind.O[index] = calculateSma(n, index, v.Candles.O)
-			ind.C[index] = calculateSma(n, index, v.Candles.C)
-			ind.H[index] = calculateSma(n, index, v.Candles.H)
-			ind.L[index] = calculateSma(n, index, v.Candles.L)
+		coef := float64(n)
+		v.Indicators[IndicatorTypeSma][coef] = make(map[string][]float64)
+		for _, barType := range BarTypes {
+			v.Indicators[IndicatorTypeSma][coef][barType], _ = calculateSma(n, l, v.Candles[barType])
 		}
-		v.Indicators[IndicatorTypeSma][float64(n)] = ind
 	}
 
-	fmt.Println("Start IndicatorTypeEma")
-	for coef := 0.03; coef <= 0.7; coef += 0.01 {
-		for index := 0; index < l; index++ {
-			ind.O[index] = calculateEma(coef, index, v.Candles.O)
-			ind.C[index] = calculateEma(coef, index, v.Candles.C)
-			ind.H[index] = calculateEma(coef, index, v.Candles.H)
-			ind.L[index] = calculateEma(coef, index, v.Candles.L)
+	fmt.Print("Start: another \n")
+	for coef := 0.03; coef <= 0.75; coef += 0.01 {
+		v.Indicators[IndicatorTypeEma][coef] = make(map[string][]float64)
+		v.Indicators[IndicatorTypeDema][coef] = make(map[string][]float64)
+		v.Indicators[IndicatorTypeTema][coef] = make(map[string][]float64)
+		v.Indicators[IndicatorTypeTemaZeroLag][coef] = make(map[string][]float64)
+		for _, barType := range BarTypes {
+			v.Indicators[IndicatorTypeEma][coef][barType], _ = calculateEma(coef, l, v.Candles[barType])
+			v.Indicators[IndicatorTypeDema][coef][barType], _ = calculateDema(coef, l, v.Indicators[IndicatorTypeEma][coef][barType])
+			v.Indicators[IndicatorTypeTema][coef][barType], _ = calculateTema(coef, l, v.Indicators[IndicatorTypeEma][coef][barType])
+			v.Indicators[IndicatorTypeTemaZeroLag][coef][barType], _ = calculateTemaZeroLag(coef, l, v.Indicators[IndicatorTypeTema][coef][barType])
 		}
-		v.Indicators[IndicatorTypeEma][coef] = ind
 	}
 
-	fmt.Println("Start IndicatorTypeDema")
-	for coef := 0.03; coef <= 0.7; coef += 0.01 {
-		for index := 0; index < l; index++ {
-			ind.O[index] = calculateDema(coef, index, v.Indicators[IndicatorTypeEma][coef].O)
-			ind.C[index] = calculateDema(coef, index, v.Indicators[IndicatorTypeEma][coef].C)
-			ind.H[index] = calculateDema(coef, index, v.Indicators[IndicatorTypeEma][coef].H)
-			ind.L[index] = calculateDema(coef, index, v.Indicators[IndicatorTypeEma][coef].L)
+	//fmt.Println(v)
+}
+
+func calculateSma(n, l int, source []float64) ([]float64, float64) {
+	coef := float64(n)
+	calc := make([]float64, 0, l)
+
+	calc = append(calc, source[0])
+	var sum float64
+
+	for i := 1; i < l; i++ {
+		sum = 0
+		if i >= n {
+			sum = (calc[i-1]*coef - source[i-n] + source[i]) / coef
+		} else {
+			sum = (calc[i-1]*float64(i) + source[i]) / float64(i+1)
 		}
-		v.Indicators[IndicatorTypeDema][coef] = ind
+		calc = append(calc, sum)
 	}
 
-	fmt.Println("Start IndicatorTypeAma")
-	for coef := 0.03; coef <= 0.7; coef += 0.01 {
-		for index := 0; index < l; index++ {
-			ind.O[index] = calculateAma(coef, index, v.Candles.O)
-			ind.C[index] = calculateAma(coef, index, v.Candles.C)
-			ind.H[index] = calculateAma(coef, index, v.Candles.H)
-			ind.L[index] = calculateAma(coef, index, v.Candles.L)
+	return calc, calc[l-1]
+}
+
+func calculateEma(coef float64, l int, source []float64) ([]float64, float64) {
+	calc := make([]float64, 0, l)
+
+	calc = append(calc, source[0])
+	for i := 1; i < l; i++ {
+		calc = append(calc, source[i]*coef+(1.0-coef)*calc[i-1])
+	}
+
+	return calc, calc[l-1]
+}
+
+func calculateDema(coef float64, l int, ema []float64) ([]float64, float64) {
+	calc := make([]float64, 0, l)
+
+	ema2, _ := calculateEma(coef, l, ema)
+
+	calc = append(calc, ema[0])
+	for i := 1; i < l; i++ {
+		calc = append(calc, 2*ema[i]-ema2[i])
+	}
+
+	return calc, calc[l-1]
+}
+
+func calculateTema(coef float64, l int, ema []float64) ([]float64, float64) {
+	calc := make([]float64, 0, l)
+
+	ema2, _ := calculateEma(coef, l, ema)
+	ema3, _ := calculateEma(coef, l, ema2)
+
+	calc = append(calc, ema[0])
+	for i := 1; i < l; i++ {
+		calc = append(calc, 3*(ema[i]-ema2[i])+ema3[i])
+	}
+
+	return calc, calc[l-1]
+}
+
+func calculateTemaZeroLag(coef float64, l int, tema []float64) ([]float64, float64) {
+	calc := make([]float64, 0, l)
+
+	tema2, _ := calculateTema(coef, l, tema)
+
+	calc = append(calc, tema[0])
+	for i := 1; i < l; i++ {
+		calc = append(calc, 2*tema[i]-tema2[i])
+	}
+
+	return calc, calc[l-1]
+}
+
+func calculateStas(n, l int, source []float64) ([]float64, float64) {
+	calc := make([]float64, 0, l)
+
+	sma, smaLast := calculateSma(n, l, source)
+	calc = sma[:4]
+
+	for i := 4; i < l; i++ {
+		m := minInt(i+1, n)
+		diff := make([]float64, m, m)
+		for k := 0; k < m; k++ {
+			diff[k] = math.Abs(source[i-m+k+1] - smaLast)
 		}
-		v.Indicators[IndicatorTypeAma][coef] = ind
-	}
 
-	fmt.Println("Start IndicatorTypeTema")
-	for coef := 0.03; coef <= 0.7; coef += 0.01 {
-		for index := 0; index < l; index++ {
-			ind.O[index] = calculateTema(coef, index, v.Indicators[IndicatorTypeEma][coef].O, v.Indicators[IndicatorTypeDema][coef].O)
-			ind.C[index] = calculateTema(coef, index, v.Indicators[IndicatorTypeEma][coef].C, v.Indicators[IndicatorTypeDema][coef].C)
-			ind.H[index] = calculateTema(coef, index, v.Indicators[IndicatorTypeEma][coef].H, v.Indicators[IndicatorTypeDema][coef].H)
-			ind.L[index] = calculateTema(coef, index, v.Indicators[IndicatorTypeEma][coef].L, v.Indicators[IndicatorTypeDema][coef].L)
+		_, smaDiff := calculateSma(m, m, diff)
+
+		sum := 0.0
+		for k := 0; k < m; k++ {
+			if diff[k] > smaDiff {
+				sum += source[i-m+k+1]
+			}
 		}
-		v.Indicators[IndicatorTypeTema][coef] = ind
+		calc = append(calc, smaLast-sum/float64(m))
 	}
+
+	return calc, calc[l-1]
 }
 
-func calculateSma(n, index int, cv []float64) float64 {
-	if index < n-1 {
-		return calculateSma(index+1, index, cv)
+func minInt(a, b int) int {
+	if a < b {
+		return a
 	}
-
-	sum := float64(0)
-	for i := index; i > index-n; i-- {
-		sum += cv[i]
-	}
-
-	return sum / float64(n)
+	return b
 }
 
-func calculateEma(coef float64, index int, cv []float64) float64 {
-	if index == 0 {
-		return cv[0]
+func calculateAma(coef float64, l int, source []float64) ([]float64, float64) {
+	calc := make([]float64, 0, l)
+
+	calc = append(calc, source[0])
+	for i := 1; i < l; i++ {
+		calc = append(calc, source[i]*coef*coef+(1.0-coef)*calc[i-1])
 	}
-	return cv[index]*coef + (1.0-coef)*calculateEma(coef, index-1, cv)
+
+	return calc, calc[l-1]
 }
 
-func calculateDema(coef float64, index int, emaV []float64) float64 {
-	if index == 0 {
-		return emaV[0]
-	}
-	return 2*emaV[index] - calculateEma(coef, index, emaV)
-}
-
-func calculateAma(coef float64, index int, cv []float64) float64 {
-	if index == 0 {
-		return cv[0]
-	}
-	return cv[index]*coef*coef + (1-coef*coef)*calculateAma(coef, index-1, cv)
-}
-
-func calculateTema(coef float64, index int, emaV []float64, demaV []float64) float64 {
-	if index == 0 {
-		return 4*emaV[0] - 3*demaV[0]
-	}
-	return 3*emaV[index] - 3*demaV[index] + calculateEma(coef, index, demaV)
-}
+//func calculateAma(coef float64, index int, cv []float64) float64 {
+//	if index == 0 {
+//		return cv[0]
+//	}
+//	return cv[index]*coef*coef + (1.0-coef*coef)*calculateAma(coef, index-1, cv)
+//}
 
 //func (sma Indicators) Calculate(index int64) float64 {
 //	if index < sma.N-1 {

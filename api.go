@@ -130,12 +130,14 @@ func downloadCandlesByFigi(figi string) {
 	CandleIndicatorStorage[figi] = make(map[tf.CandleInterval]CandleIndicatorData)
 	data := &CandleIndicatorData{}
 
-	data.Indicators = make(map[IndicatorType]map[float64]Bars)
-	data.Indicators[IndicatorTypeSma] = make(map[float64]Bars)
-	data.Indicators[IndicatorTypeEma] = make(map[float64]Bars)
-	data.Indicators[IndicatorTypeDema] = make(map[float64]Bars)
-	data.Indicators[IndicatorTypeAma] = make(map[float64]Bars)
-	data.Indicators[IndicatorTypeTema] = make(map[float64]Bars)
+	data.Indicators = make(map[IndicatorType]map[float64]map[string][]float64)
+	data.Indicators[IndicatorTypeSma] = make(map[float64]map[string][]float64)
+	data.Indicators[IndicatorTypeEma] = make(map[float64]map[string][]float64)
+	data.Indicators[IndicatorTypeDema] = make(map[float64]map[string][]float64)
+	//data.Indicators[IndicatorTypeAma] = make(map[float64]map[string][]float64)
+	data.Indicators[IndicatorTypeTema] = make(map[float64]map[string][]float64)
+
+	data.Candles = make(map[string][]float64)
 
 	now := time.Now().AddDate(0, 0, 7)
 	start := now.AddDate(-3, 0, 0)
@@ -169,10 +171,10 @@ func downloadCandles(tm time.Time, figi string, data *CandleIndicatorData) {
 
 	for _, candle := range candles {
 		data.Time = append(data.Time, candle.TS)
-		data.Candles.O = append(data.Candles.O, candle.OpenPrice)
-		data.Candles.C = append(data.Candles.C, candle.ClosePrice)
-		data.Candles.H = append(data.Candles.H, candle.HighPrice)
-		data.Candles.L = append(data.Candles.L, candle.LowPrice)
+		data.Candles["O"] = append(data.Candles["O"], candle.OpenPrice)
+		data.Candles["C"] = append(data.Candles["C"], candle.ClosePrice)
+		data.Candles["H"] = append(data.Candles["H"], candle.HighPrice)
+		data.Candles["L"] = append(data.Candles["L"], candle.LowPrice)
 	}
 	CandleIndicatorStorage[figi][tf.CandleInterval1Hour] = *data
 	fmt.Printf("Кол-во свечей: %d\n", len(CandleIndicatorStorage[figi][tf.CandleInterval1Hour].Time))
