@@ -3,14 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	ps "github.com/PerfilovStanislav/go-raw-postgresql-builder"
 	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
 	"log"
 	"math/rand"
 	"os"
-	"strconv"
 	"time"
 	//_ "github.com/lib/pq"
 )
@@ -20,52 +18,10 @@ var client *tf.SandboxRestClient
 var streamClient *tf.StreamingClient
 var logger *log.Logger
 
-type ListenCandleData struct {
-	StockIntervalId int64
-	Time            time.Time
-}
-
-var listenCandles = map[string]map[string]ListenCandleData{ // interval => figi => stock_interval_id
-	"hour": {
-		"BBG000B9XRY4": {1, time.Unix(0, 0)},
-		"BBG000BND699": {2, time.Unix(0, 0)},
-	},
-}
-
-func Download() {
-	registerStreamClient()
-
-	initListening()
-	defer streamClient.Close()
-
-	for {
-		time.Sleep(10 * time.Second)
-	}
-	//downloadCandlesByFigi("BBG000BND699")
-	//startListening()
-}
-
-func initListening() {
-	sql := `SELECT max(time) FROM candles WHERE stock_interval_id = $StockIntervalId`
-	var t time.Time
-
-	for interval, candles := range listenCandles {
-		for figi, data := range candles {
-			err := Db.Get(&t,
-				ps.Sql{sql, struct{ StockIntervalId int64 }{data.StockIntervalId}}.String(),
-			)
-			if err != nil {
-				log.Panic(err, sql)
-			}
-			candle := listenCandles[interval][figi]
-			candle.Time = t
-			listenCandles[interval][figi] = candle
-
-			err = streamClient.SubscribeCandle(figi, tf.CandleInterval(interval), requestID())
-			if err != nil {
-				log.Fatalln(err)
-			}
-		}
+func listenCandle(figi string) {
+	err := streamClient.SubscribeCandle(figi, tf.CandleInterval1Hour, requestID())
+	if err != nil {
+		log.Fatalln(err)
 	}
 }
 
@@ -112,35 +68,26 @@ func registerStreamClient() {
 }
 
 func newCandleEvent(c *tf.Candle) {
-	data := listenCandles[string(c.Interval)][c.FIGI]
-	if data.Time == c.TS {
-		return
-	}
-	sql := ps.Sql{"INSERT INTO candles(stock_interval_id, time, o, c, h, l, v) SELECT " +
-		strconv.FormatInt(data.StockIntervalId, 10) +
-		", $TS, $OpenPrice, $ClosePrice, $HighPrice, $LowPrice, $Volume", c,
-	}
-	_, err := Db.Exec(sql.String())
-	if err != nil {
-		log.Fatalln(err)
-	}
+	data := Storage[c.FIGI][tf.CandleInterval1Hour]
+	Storage[c.FIGI][tf.CandleInterval1Hour] = *data.upsertCandle(c)
+	fmt.Println("asd")
 }
 
 func downloadCandlesByFigi(figi string) {
-	CandleIndicatorStorage[figi] = make(map[tf.CandleInterval]CandleIndicatorData)
-	data := &CandleIndicatorData{}
+	Storage[figi] = make(map[tf.CandleInterval]CandleData)
+	data := &CandleData{}
 
-	data.Indicators = make(map[IndicatorType]map[float64]map[string][]float64)
-	data.Indicators[IndicatorTypeSma] = make(map[float64]map[string][]float64)
-	data.Indicators[IndicatorTypeEma] = make(map[float64]map[string][]float64)
-	data.Indicators[IndicatorTypeDema] = make(map[float64]map[string][]float64)
+	data.Indicators = make(map[IndicatorType]map[int]map[string][]float64)
+	data.Indicators[IndicatorTypeSma] = make(map[int]map[string][]float64)
+	data.Indicators[IndicatorTypeEma] = make(map[int]map[string][]float64)
+	data.Indicators[IndicatorTypeDema] = make(map[int]map[string][]float64)
 	//data.Indicators[IndicatorTypeAma] = make(map[float64]map[string][]float64)
-	data.Indicators[IndicatorTypeTema] = make(map[float64]map[string][]float64)
+	data.Indicators[IndicatorTypeTema] = make(map[int]map[string][]float64)
 
 	data.Candles = make(map[string][]float64)
 
-	now := time.Now().AddDate(0, 0, 7)
-	start := now.AddDate(-3, 0, 0)
+	now := time.Now().AddDate(0, 0, -1)
+	start := now.AddDate(0, 0, -15)
 	var apiCallCounter = 0
 	for start.Before(now) {
 		apiCallCounter += 1
@@ -155,7 +102,7 @@ func downloadCandlesByFigi(figi string) {
 	}
 }
 
-func downloadCandles(tm time.Time, figi string, data *CandleIndicatorData) {
+func downloadCandles(tm time.Time, figi string, data *CandleData) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
 
@@ -170,14 +117,10 @@ func downloadCandles(tm time.Time, figi string, data *CandleIndicatorData) {
 	}
 
 	for _, candle := range candles {
-		data.Time = append(data.Time, candle.TS)
-		data.Candles["O"] = append(data.Candles["O"], candle.OpenPrice)
-		data.Candles["C"] = append(data.Candles["C"], candle.ClosePrice)
-		data.Candles["H"] = append(data.Candles["H"], candle.HighPrice)
-		data.Candles["L"] = append(data.Candles["L"], candle.LowPrice)
+		data.upsertCandle(&candle)
 	}
-	CandleIndicatorStorage[figi][tf.CandleInterval1Hour] = *data
-	fmt.Printf("Кол-во свечей: %d\n", len(CandleIndicatorStorage[figi][tf.CandleInterval1Hour].Time))
+	Storage[figi][tf.CandleInterval1Hour] = *data
+	fmt.Printf("Кол-во свечей: %d\n", len(Storage[figi][tf.CandleInterval1Hour].Time))
 
 }
 

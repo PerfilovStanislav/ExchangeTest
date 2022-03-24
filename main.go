@@ -12,8 +12,12 @@ import (
 	_ "github.com/jackc/pgx/stdlib"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
+	"os/signal"
+	"runtime/pprof"
 	"sync"
+	"time"
 )
 
 const StartDeposit = float64(100000.0)
@@ -27,26 +31,30 @@ func main() {
 	figi := flag.String("figi", "BBG000B9XRY4", "example: BBG000B9XRY4")
 	flag.Parse()
 
-	//c := make(chan os.Signal, 1)
-	//signal.Notify(c, os.Interrupt, os.Kill)
-	//go func() {
-	//	for sig := range c {
-	//		log.Printf("captured %v, stopping profiler and exiting..", sig)
-	//		pprof.StopCPUProfile()
-	//		os.Exit(1)
-	//	}
-	//}()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, os.Kill)
+	go func() {
+		for sig := range c {
+			log.Printf("captured %v, stopping profiler and exiting..", sig)
+			pprof.StopCPUProfile()
+			os.Exit(1)
+		}
+	}()
 
-	CandleIndicatorStorage = make(map[string]map[tf.CandleInterval]CandleIndicatorData)
-	restoreStorage()
+	Storage = make(map[string]map[tf.CandleInterval]CandleData)
+	//restoreStorage()
 
-	//rand.Seed(time.Now().UnixNano()) // инициируем Seed рандома для функции requestID
-	//registerClient()
-	//downloadCandlesByFigi(*figi)
-	//fillIndicators(*figi)
-	test(*figi)
+	rand.Seed(time.Now().UnixNano()) // инициируем Seed рандома для функции requestID
+	registerClient()
+	//registerStreamClient()
+	//listenCandle(*figi)
+	downloadCandlesByFigi(*figi)
+	fillIndicators(*figi)
+	//test(*figi)
 
 	//backupStorage()
+
+	select {}
 }
 
 func EncodeToBytes(p interface{}) []byte {
@@ -84,11 +92,11 @@ func Decompress(s []byte) []byte {
 func restoreStorage() {
 	dataIn := Decompress(ReadFromFile("storage.dat"))
 	dec := gob.NewDecoder(bytes.NewReader(dataIn))
-	_ = dec.Decode(&CandleIndicatorStorage)
+	_ = dec.Decode(&Storage)
 }
 
 func backupStorage() {
-	dataOut := Compress(EncodeToBytes(CandleIndicatorStorage))
+	dataOut := Compress(EncodeToBytes(Storage))
 	_ = ioutil.WriteFile("storage.dat", dataOut, 0644)
 }
 
@@ -107,7 +115,7 @@ func ReadFromFile(path string) []byte {
 }
 
 func test(figi string) {
-	storage := CandleIndicatorStorage[figi][tf.CandleInterval1Hour]
+	storage := Storage[figi][tf.CandleInterval1Hour]
 
 	var maxSpeed = 0.0
 	var maxWallet = 0.0
@@ -120,7 +128,7 @@ func test(figi string) {
 	wg.Wait()
 }
 
-func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float64, storage *CandleIndicatorData) {
+func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float64, storage *CandleData) {
 	defer wg.Done()
 
 	var cl, wallet, openedPrice, speed float64
@@ -172,7 +180,7 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 
 								speed = (wallet - StartDeposit) / float64(rnSum)
 								if cnt >= 10 && rnSum != 0.0 {
-									if speed > (*maxSpeed)*0.9 {
+									if speed > /*(*maxSpeed)*0.9*/ 1000.0 {
 										show = true
 										if speed > *maxSpeed {
 											*maxSpeed = speed
@@ -180,10 +188,10 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 									}
 								}
 
-								if wallet-StartDeposit > *maxWallet {
-									*maxWallet = wallet
-									show = true
-								}
+								//if wallet-StartDeposit > *maxWallet {
+								//	*maxWallet = wallet
+								//	show = true
+								//}
 
 								if show {
 									fmt.Printf("%s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s] \n️️",

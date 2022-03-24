@@ -5,7 +5,6 @@ import (
 	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
-	"math"
 	"time"
 	//_ "github.com/lib/pq"
 )
@@ -27,6 +26,20 @@ var IndicatorTypes = []IndicatorType{
 	IndicatorTypeTemaZeroLag,
 }
 
+const (
+	IndicatorType2Ema     IndicatorType = "2_ema"
+	IndicatorType3Ema     IndicatorType = "3_ema"
+	IndicatorTypeEmaTema  IndicatorType = "ema_tema"
+	IndicatorType2EmaTema IndicatorType = "2_ema_tema"
+	IndicatorType3EmaTema IndicatorType = "3_ema_tema"
+	IndicatorType2Tema    IndicatorType = "2tema"
+)
+
+var AdditionalIndicatorTypes = []IndicatorType{
+	IndicatorType2Ema, IndicatorType3Ema, IndicatorTypeEmaTema, IndicatorType2EmaTema, IndicatorType3EmaTema,
+	IndicatorType2Tema,
+}
+
 var BarTypes = []string{
 	"O", "C", "H", "L",
 }
@@ -38,154 +51,324 @@ type Bars struct {
 	L []float64
 }
 
-type CandleIndicatorData struct {
+var Storage map[string]map[tf.CandleInterval]CandleData
+
+type CandleData struct {
 	Time       []time.Time
 	Candles    map[string][]float64
-	Indicators map[IndicatorType]map[float64]map[string][]float64 // IndicatorTypeSma[N=3 OR coef=0.5]Bars
+	Indicators map[IndicatorType]map[int]map[string][]float64 // IndicatorTypeSma[N=3 OR coef=0.5]Bars
 }
 
-var CandleIndicatorStorage map[string]map[tf.CandleInterval]CandleIndicatorData
+func (data *CandleData) len() int {
+	return len(data.Time)
+}
+
+func (data *CandleData) index() int {
+	return data.len() - 1
+}
+
+func (data *CandleData) lastTime() time.Time {
+	return data.Time[data.index()]
+}
+
+func (data *CandleData) upsertCandle(c *tf.Candle) *CandleData {
+	l := data.index()
+	if l >= 0 && data.Time[l].Equal(c.TS) {
+		data.Time[l] = c.TS
+		data.Candles["O"][l] = c.OpenPrice
+		data.Candles["C"][l] = c.ClosePrice
+		data.Candles["H"][l] = c.HighPrice
+		data.Candles["L"][l] = c.LowPrice
+	} else {
+		data.Time = append(data.Time, c.TS)
+		data.Candles["O"] = append(data.Candles["O"], c.OpenPrice)
+		data.Candles["C"] = append(data.Candles["C"], c.ClosePrice)
+		data.Candles["H"] = append(data.Candles["H"], c.HighPrice)
+		data.Candles["L"] = append(data.Candles["L"], c.LowPrice)
+	}
+	return data
+}
 
 func fillIndicators(figi string) {
-	v := CandleIndicatorStorage[figi][tf.CandleInterval1Hour]
-	l := len(v.Time)
+	data := Storage[figi][tf.CandleInterval1Hour]
+	//l := len(data.Time)
 
-	for _, indicatorType := range IndicatorTypes {
-		v.Indicators[indicatorType] = make(map[float64]map[string][]float64)
+	for _, indicatorType := range append(IndicatorTypes, AdditionalIndicatorTypes...) {
+		data.Indicators[indicatorType] = make(map[int]map[string][]float64)
 	}
 
-	fmt.Println("Start: ", IndicatorTypeStas)
-	for n := 5; n <= 70; n++ {
-		coef := float64(n)
-		v.Indicators[IndicatorTypeStas][coef] = make(map[string][]float64)
-		for _, barType := range BarTypes {
-			v.Indicators[IndicatorTypeStas][coef][barType], _ = calculateStas(n, l, v.Candles[barType])
-		}
-	}
+	//fmt.Println("Start: ", IndicatorTypeStas)
+	//for n := 5; n <= 70; n += 100 /*n++*/ {
+	//	data.Indicators[IndicatorTypeStas][n] = make(map[string][]float64)
+	//	for _, barType := range BarTypes {
+	//		data.Indicators[IndicatorTypeStas][n][barType], _ = calculateStas(n, l, data.Candles[barType])
+	//	}
+	//}
 
-	fmt.Println("Start: ", IndicatorTypeSma)
-	for n := 3; n <= 70; n++ {
-		coef := float64(n)
-		v.Indicators[IndicatorTypeSma][coef] = make(map[string][]float64)
-		for _, barType := range BarTypes {
-			v.Indicators[IndicatorTypeSma][coef][barType], _ = calculateSma(n, l, v.Candles[barType])
-		}
-	}
+	//fmt.Println("Start: ", IndicatorTypeSma)
+	//for n := 3; n <= 70; n += 100 /*n++*/ {
+	//	data.Indicators[IndicatorTypeSma][n] = make(map[string][]float64)
+	//	for _, barType := range BarTypes {
+	//		for i := 0; i < l; i++ {
+	//			data.CalculateSma(n, i, barType)
+	//		}
+	//	}
+	//}
 
 	fmt.Print("Start: another \n")
-	for coef := 0.03; coef <= 0.75; coef += 0.01 {
-		v.Indicators[IndicatorTypeEma][coef] = make(map[string][]float64)
-		v.Indicators[IndicatorTypeDema][coef] = make(map[string][]float64)
-		v.Indicators[IndicatorTypeTema][coef] = make(map[string][]float64)
-		v.Indicators[IndicatorTypeTemaZeroLag][coef] = make(map[string][]float64)
+	for n := 40; n <= 75; n += 50 {
+		for _, indicatorType := range append(IndicatorTypes, AdditionalIndicatorTypes...) {
+			data.Indicators[indicatorType][n] = make(map[string][]float64)
+		}
+
+		//data.Indicators[IndicatorTypeTema][n] = make(map[string][]float64)
+		//data.Indicators[IndicatorTypeTemaZeroLag][n] = make(map[string][]float64)
 		for _, barType := range BarTypes {
-			v.Indicators[IndicatorTypeEma][coef][barType], _ = calculateEma(coef, l, v.Candles[barType])
-			v.Indicators[IndicatorTypeDema][coef][barType], _ = calculateDema(coef, l, v.Indicators[IndicatorTypeEma][coef][barType])
-			v.Indicators[IndicatorTypeTema][coef][barType], _ = calculateTema(coef, l, v.Indicators[IndicatorTypeEma][coef][barType])
-			v.Indicators[IndicatorTypeTemaZeroLag][coef][barType], _ = calculateTemaZeroLag(coef, l, v.Indicators[IndicatorTypeTema][coef][barType])
+			//for i := 0; i < l; i++ {
+			//	data.addEma(n, i, barType)
+			//	data.CalculateDema(n, i, barType)
+			//}
+			//data.getDema(n, 114, barType)
+			data.getTemaZero(n, data.index(), barType)
+			//data.getTemaZero(n, data.index(), barType)
+
+			//data.Indicators[IndicatorTypeEma][n][barType], _ = calculateEma(n, l, data.Candles[barType])
+			//data.Indicators[IndicatorTypeDema][n][barType], _ = calculateDema(n, l, data.Indicators[IndicatorTypeEma][n][barType])
+			//data.Indicators[IndicatorTypeTema][n][barType], _ = calculateTema(n, l, data.Indicators[IndicatorTypeEma][n][barType])
+			//data.Indicators[IndicatorTypeTemaZeroLag][n][barType], _ = calculateTemaZeroLag(n, l, data.Indicators[IndicatorTypeTema][n][barType])
 		}
 	}
 
-	//fmt.Println(v)
+	fmt.Println(data)
 }
 
-func calculateSma(n, l int, source []float64) ([]float64, float64) {
+func (data *CandleData) CalculateSma(n, i int, barType string) float64 {
 	coef := float64(n)
-	calc := make([]float64, 0, l)
+	source := data.Candles[barType]
+	var calc float64
 
-	calc = append(calc, source[0])
-	var sum float64
-
-	for i := 1; i < l; i++ {
-		sum = 0
-		if i >= n {
-			sum = (calc[i-1]*coef - source[i-n] + source[i]) / coef
-		} else {
-			sum = (calc[i-1]*float64(i) + source[i]) / float64(i+1)
-		}
-		calc = append(calc, sum)
+	indicator := data.Indicators[IndicatorTypeSma][n][barType]
+	if i >= n {
+		calc = indicator[i-1] + (source[i]-source[i-n])/coef
+	} else if i != 0 {
+		calc = (indicator[i-1]*float64(i) + source[i]) / float64(i+1)
+	} else {
+		indicator = make([]float64, 0)
+		calc = source[0]
 	}
 
-	return calc, calc[l-1]
+	indicator = append(indicator, calc)
+	data.Indicators[IndicatorTypeSma][n][barType] = indicator
+	return calc
 }
 
-func calculateEma(coef float64, l int, source []float64) ([]float64, float64) {
-	calc := make([]float64, 0, l)
+func (data *CandleData) calculateEma(n, i int, barType string) float64 {
+	if i > 0 {
+		return (data.Candles[barType][i]*float64(n) + float64(100-n)*data.getEma(n, i-1, barType)) * 0.01
+	}
+	return data.Candles[barType][i]
+}
 
-	calc = append(calc, source[0])
-	for i := 1; i < l; i++ {
-		calc = append(calc, source[i]*coef+(1.0-coef)*calc[i-1])
+func (data *CandleData) calculateDema(n, i int, barType string) float64 {
+	return 2*data.getEma(n, i, barType) - data.get2Ema(n, i, barType)
+}
+
+func (data *CandleData) calculateTema(n, i int, barType string) float64 {
+	return 3*(data.getEma(n, i, barType)-data.get2Ema(n, i, barType)) + data.get3Ema(n, i, barType)
+}
+
+func (data *CandleData) calculate2Ema(n, i int, barType string) float64 {
+	if i > 0 {
+		return (data.getEma(n, i, barType)*float64(n) + float64(100-n)*data.get2Ema(n, i-1, barType)) * 0.01
+	}
+	return data.Candles[barType][i]
+}
+
+func (data *CandleData) calculate3Ema(n, i int, barType string) float64 {
+	if i > 0 {
+		return (data.get2Ema(n, i, barType)*float64(n) + float64(100-n)*data.get3Ema(n, i-1, barType)) * 0.01
+	}
+	return data.Candles[barType][i]
+}
+
+func (data *CandleData) calculateEmaTema(n, i int, barType string) float64 {
+	if i > 0 {
+		return (data.getTema(n, i, barType)*float64(n) + float64(100-n)*data.getEmaTema(n, i-1, barType)) * 0.01
+	}
+	return data.Candles[barType][i]
+}
+
+func (data *CandleData) calculate2EmaTema(n, i int, barType string) float64 {
+	if i > 0 {
+		return (data.getEmaTema(n, i, barType)*float64(n) + float64(100-n)*data.get2EmaTema(n, i-1, barType)) * 0.01
+	}
+	return data.Candles[barType][i]
+}
+
+func (data *CandleData) calculate3EmaTema(n, i int, barType string) float64 {
+	if i > 0 {
+		return (data.get2EmaTema(n, i, barType)*float64(n) + float64(100-n)*data.get3EmaTema(n, i-1, barType)) * 0.01
+	}
+	return data.Candles[barType][i]
+}
+
+func (data *CandleData) calculate2Tema(n, i int, barType string) float64 {
+	return 3*(data.getEmaTema(n, i, barType)-data.get2EmaTema(n, i, barType)) + data.get3EmaTema(n, i, barType)
+}
+
+func (data *CandleData) calculateTemaZero(n, i int, barType string) float64 {
+	return 2*data.getTema(n, i, barType) - data.get2Tema(n, i, barType)
+}
+
+type indicatorGet func(n, i int, barType string) float64
+
+// GET
+func (data *CandleData) get(indicatorType IndicatorType, fun indicatorGet, n, i int, barType string) float64 {
+	arr := data.Indicators[indicatorType][n][barType]
+	if len(arr) > i {
+		return arr[i]
 	}
 
-	return calc, calc[l-1]
-}
-
-func calculateDema(coef float64, l int, ema []float64) ([]float64, float64) {
-	calc := make([]float64, 0, l)
-
-	ema2, _ := calculateEma(coef, l, ema)
-
-	calc = append(calc, ema[0])
-	for i := 1; i < l; i++ {
-		calc = append(calc, 2*ema[i]-ema2[i])
+	for k := len(arr); k <= i; k++ {
+		arr = append(arr, fun(n, k, barType))
+		data.Indicators[indicatorType][n][barType] = arr
 	}
 
-	return calc, calc[l-1]
+	return arr[i]
 }
 
-func calculateTema(coef float64, l int, ema []float64) ([]float64, float64) {
-	calc := make([]float64, 0, l)
-
-	ema2, _ := calculateEma(coef, l, ema)
-	ema3, _ := calculateEma(coef, l, ema2)
-
-	calc = append(calc, ema[0])
-	for i := 1; i < l; i++ {
-		calc = append(calc, 3*(ema[i]-ema2[i])+ema3[i])
-	}
-
-	return calc, calc[l-1]
+func (data *CandleData) getEma(n, i int, barType string) float64 {
+	return data.get(IndicatorTypeEma, data.calculateEma, n, i, barType)
 }
 
-func calculateTemaZeroLag(coef float64, l int, tema []float64) ([]float64, float64) {
-	calc := make([]float64, 0, l)
-
-	tema2, _ := calculateTema(coef, l, tema)
-
-	calc = append(calc, tema[0])
-	for i := 1; i < l; i++ {
-		calc = append(calc, 2*tema[i]-tema2[i])
-	}
-
-	return calc, calc[l-1]
+func (data *CandleData) get2Ema(n, i int, barType string) float64 {
+	return data.get(IndicatorType2Ema, data.calculate2Ema, n, i, barType)
 }
 
-func calculateStas(n, l int, source []float64) ([]float64, float64) {
-	calc := make([]float64, 0, l)
-
-	sma, smaLast := calculateSma(n, l, source)
-	calc = sma[:4]
-
-	for i := 4; i < l; i++ {
-		m := minInt(i+1, n)
-		diff := make([]float64, m, m)
-		for k := 0; k < m; k++ {
-			diff[k] = math.Abs(source[i-m+k+1] - smaLast)
-		}
-
-		_, smaDiff := calculateSma(m, m, diff)
-
-		sum := 0.0
-		for k := 0; k < m; k++ {
-			if diff[k] > smaDiff {
-				sum += source[i-m+k+1]
-			}
-		}
-		calc = append(calc, smaLast-sum/float64(m))
-	}
-
-	return calc, calc[l-1]
+func (data *CandleData) get3Ema(n, i int, barType string) float64 {
+	return data.get(IndicatorType3Ema, data.calculate3Ema, n, i, barType)
 }
+
+func (data *CandleData) getDema(n, i int, barType string) float64 {
+	return data.get(IndicatorTypeDema, data.calculateDema, n, i, barType)
+}
+
+func (data *CandleData) getTema(n, i int, barType string) float64 {
+	return data.get(IndicatorTypeTema, data.calculateTema, n, i, barType)
+}
+
+func (data *CandleData) getEmaTema(n, i int, barType string) float64 {
+	return data.get(IndicatorTypeEmaTema, data.calculateEmaTema, n, i, barType)
+}
+
+func (data *CandleData) get2EmaTema(n, i int, barType string) float64 {
+	return data.get(IndicatorType2EmaTema, data.calculate2EmaTema, n, i, barType)
+}
+
+func (data *CandleData) get3EmaTema(n, i int, barType string) float64 {
+	return data.get(IndicatorType3EmaTema, data.calculate3EmaTema, n, i, barType)
+}
+
+func (data *CandleData) get2Tema(n, i int, barType string) float64 {
+	return data.get(IndicatorType2Tema, data.calculate2Tema, n, i, barType)
+}
+
+func (data *CandleData) getTemaZero(n, i int, barType string) float64 {
+	return data.get(IndicatorTypeTemaZeroLag, data.calculateTemaZero, n, i, barType)
+}
+
+//func (data *CandleData) getTemaZero(n, i int, barType string) float64 {
+//	arr := data.Indicators[IndicatorTypeTemaZeroLag][n][barType]
+//	if len(arr) > i {
+//		return arr[i]
+//	}
+//
+//	for k := len(arr); k <= i; k++ {
+//		arr = append(arr, data.calculateTemaZero(n, k, barType))
+//		data.Indicators[IndicatorTypeTemaZeroLag][n][barType] = arr
+//	}
+//
+//	return arr[i]
+//}
+
+//func calculateEma(n, l int, source []float64) ([]float64, float64) {
+//	coef := float64(n) * 0.01
+//	calc := make([]float64, 0, l)
+//
+//	calc = append(calc, source[0])
+//	for i := 1; i < l; i++ {
+//		calc = append(calc, source[i]*coef+(1.0-coef)*calc[i-1])
+//	}
+//
+//	return calc, calc[l-1]
+//}
+
+//func calculateDema(n, l int, ema []float64) ([]float64, float64) {
+//	calc := make([]float64, 0, l)
+//
+//	ema2, _ := calculateEma(n, l, ema)
+//
+//	calc = append(calc, ema[0])
+//	for i := 1; i < l; i++ {
+//		calc = append(calc, 2*ema[i]-ema2[i])
+//	}
+//
+//	return calc, calc[l-1]
+//}
+
+//func calculateTema(n, l int, ema []float64) ([]float64, float64) {
+//	calc := make([]float64, 0, l)
+//
+//	ema2, _ := calculateEma(n, l, ema)
+//	ema3, _ := calculateEma(n, l, ema2)
+//
+//	calc = append(calc, ema[0])
+//	for i := 1; i < l; i++ {
+//		calc = append(calc, 3*(ema[i]-ema2[i])+ema3[i])
+//	}
+//
+//	return calc, calc[l-1]
+//}
+
+//func calculateTemaZeroLag(n, l int, tema []float64) ([]float64, float64) {
+//	calc := make([]float64, 0, l)
+//
+//	tema2, _ := calculateTema(n, l, tema)
+//
+//	calc = append(calc, tema[0])
+//	for i := 1; i < l; i++ {
+//		calc = append(calc, 2*tema[i]-tema2[i])
+//	}
+//
+//	return calc, calc[l-1]
+//}
+
+//func calculateStas(n, l int, source []float64) ([]float64, float64) {
+//	calc := make([]float64, 0, l)
+//
+//	sma, smaLast := calculateSma(n, l, source)
+//	calc = sma[:4]
+//
+//	for i := 4; i < l; i++ {
+//		m := minInt(i+1, n)
+//		diff := make([]float64, m, m)
+//		for k := 0; k < m; k++ {
+//			diff[k] = math.Abs(source[i-m+k+1] - smaLast)
+//		}
+//
+//		_, smaDiff := calculateSma(m, m, diff)
+//
+//		sum := 0.0
+//		for k := 0; k < m; k++ {
+//			if diff[k] > smaDiff {
+//				sum += source[i-m+k+1]
+//			}
+//		}
+//		calc = append(calc, smaLast-sum/float64(m))
+//	}
+//
+//	return calc, calc[l-1]
+//}
 
 func minInt(a, b int) int {
 	if a < b {
