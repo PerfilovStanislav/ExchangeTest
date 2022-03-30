@@ -18,8 +18,8 @@ var client *tf.SandboxRestClient
 var streamClient *tf.StreamingClient
 var logger *log.Logger
 
-func listenCandle(figi string) {
-	err := streamClient.SubscribeCandle(figi, tf.CandleInterval1Hour, requestID())
+func listenCandle(figi string, interval tf.CandleInterval) {
+	err := streamClient.SubscribeCandle(figi, interval, requestID())
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -53,7 +53,7 @@ func registerStreamClient() {
 			logger.Printf("Got event %+v", event)
 			switch sdkEvent := event.(type) {
 			case tf.CandleEvent:
-				newCandleEvent(&sdkEvent.Candle)
+				newCandleEvent(sdkEvent.Candle)
 				return nil
 			default:
 				logger.Printf("sdkEvent %+v", sdkEvent)
@@ -67,27 +67,18 @@ func registerStreamClient() {
 	}()
 }
 
-func newCandleEvent(c *tf.Candle) {
-	data := Storage[c.FIGI][tf.CandleInterval1Hour]
-	Storage[c.FIGI][tf.CandleInterval1Hour] = *data.upsertCandle(c)
-	fmt.Println("asd")
+func newCandleEvent(c tf.Candle) {
+	data := getStorageData(c.FIGI, c.Interval)
+	data.upsertCandle(c)
+	data.save()
+	fmt.Printf("%v+", c)
 }
 
-func downloadCandlesByFigi(figi string) {
-	Storage[figi] = make(map[tf.CandleInterval]CandleData)
-	data := &CandleData{}
+func downloadCandlesByFigi(data *CandleData) {
+	data.Candles = make(map[BarType][]float64)
 
-	data.Indicators = make(map[IndicatorType]map[int]map[string][]float64)
-	data.Indicators[IndicatorTypeSma] = make(map[int]map[string][]float64)
-	data.Indicators[IndicatorTypeEma] = make(map[int]map[string][]float64)
-	data.Indicators[IndicatorTypeDema] = make(map[int]map[string][]float64)
-	//data.Indicators[IndicatorTypeAma] = make(map[float64]map[string][]float64)
-	data.Indicators[IndicatorTypeTema] = make(map[int]map[string][]float64)
-
-	data.Candles = make(map[string][]float64)
-
-	now := time.Now().AddDate(0, 0, -1)
-	start := now.AddDate(0, 0, -15)
+	now := time.Now().AddDate(0, 0, 7)
+	start := now.AddDate(-3, 0, 0)
 	var apiCallCounter = 0
 	for start.Before(now) {
 		apiCallCounter += 1
@@ -97,16 +88,16 @@ func downloadCandlesByFigi(figi string) {
 			apiCallCounter = 1
 		}
 
-		downloadCandles(start, figi, data)
+		downloadCandles(start, data)
 		start = start.AddDate(0, 0, 7)
 	}
 }
 
-func downloadCandles(tm time.Time, figi string, data *CandleData) {
+func downloadCandles(tm time.Time, data *CandleData) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
 
-	candles, err := client.Candles(ctx, tm.AddDate(0, 0, -7), tm, tf.CandleInterval1Hour, figi)
+	candles, err := client.Candles(ctx, tm.AddDate(0, 0, -7), tm, data.Interval, data.Figi)
 	if err != nil {
 		fmt.Sprintln(err)
 		log.Fatalln(err)
@@ -117,10 +108,10 @@ func downloadCandles(tm time.Time, figi string, data *CandleData) {
 	}
 
 	for _, candle := range candles {
-		data.upsertCandle(&candle)
+		data.upsertCandle(candle)
 	}
-	Storage[figi][tf.CandleInterval1Hour] = *data
-	fmt.Printf("Кол-во свечей: %d\n", len(Storage[figi][tf.CandleInterval1Hour].Time))
+	data.save()
+	fmt.Printf("Кол-во свечей: %d\n", data.len())
 
 }
 
