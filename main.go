@@ -8,24 +8,24 @@ import (
 	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
+	"github.com/joho/godotenv"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"os"
 	"os/signal"
 	"runtime/pprof"
-	"time"
 )
 
 const StartDeposit = float64(100000.0)
 const Commission = float64(0.06)
 
 func main() {
+	_ = godotenv.Load()
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
 	go func() {
 		for sig := range c {
-			log.Printf("Stopped %v", sig)
+			log.Printf("Stopped %+v", sig)
 			pprof.StopCPUProfile()
 			os.Exit(1)
 		}
@@ -33,17 +33,23 @@ func main() {
 
 	Storage = make(map[string]map[tf.CandleInterval]CandleData)
 
-	rand.Seed(time.Now().UnixNano())
-	registerClient()
-	registerStreamClient()
-	//restoreStorage()
+	//rand.Seed(time.Now().UnixNano())
+	tinkoff := &Tinkoff{}
+	tinkoff.register(os.Getenv("token"))
 
-	testHandler()
-	listenCandle("BBG000B9XRY4", tf.CandleInterval1Hour)
+	//tinkoff.Open("BBG000B9XRY4", 2)
+	//tinkoff.Close("BBG000B9XRY4", 2)
+	//ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	//defer cancel()
+	//p, _ := tinkoff.ApiClient.Portfolio(ctx, tinkoff.Account.ID)
+	//fmt.Printf("%+v", p)
+	backupStorage()
 
-	//backupStorage()
+	testHandler(tinkoff, false)
 
-	select {}
+	//listenCandles(tinkoff)
+
+	//select {}
 }
 
 func EncodeToBytes(p interface{}) []byte {

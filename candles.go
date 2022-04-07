@@ -58,6 +58,7 @@ func initStorageData(figi string, interval tf.CandleInterval) *CandleData {
 		Storage[figi] = make(map[tf.CandleInterval]CandleData)
 	}
 	data := Storage[figi][interval]
+	data.Indicators = make(map[IndicatorType]map[int]map[BarType][]float64)
 	data.Figi = figi
 	data.Interval = interval
 	return &data
@@ -92,7 +93,7 @@ func (data *CandleData) lastTime() time.Time {
 	return data.Time[data.index()]
 }
 
-func (data *CandleData) upsertCandle(c tf.Candle) {
+func (data *CandleData) upsertCandle(c tf.Candle) bool {
 	l := data.index()
 	if l >= 0 && data.Time[l].Equal(c.TS) {
 		data.Time[l] = c.TS
@@ -100,12 +101,14 @@ func (data *CandleData) upsertCandle(c tf.Candle) {
 		data.Candles["C"][l] = c.ClosePrice
 		data.Candles["H"][l] = c.HighPrice
 		data.Candles["L"][l] = c.LowPrice
+		return false
 	} else {
 		data.Time = append(data.Time, c.TS)
 		data.Candles["O"] = append(data.Candles["O"], c.OpenPrice)
 		data.Candles["C"] = append(data.Candles["C"], c.ClosePrice)
 		data.Candles["H"] = append(data.Candles["H"], c.HighPrice)
 		data.Candles["L"] = append(data.Candles["L"], c.LowPrice)
+		return true
 	}
 }
 

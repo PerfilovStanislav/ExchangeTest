@@ -10,12 +10,21 @@ import (
 	//_ "github.com/lib/pq"
 )
 
-func testHandler() {
-	data := initStorageData("BBG000B9XRY4", tf.CandleInterval1Hour)
+func testHandler(tinkoff *Tinkoff, restore bool) {
+	figi := "BBG000B9XRY4"
+	interval := tf.CandleInterval1Hour
 
-	downloadCandlesByFigi(data)
-	//fillIndicators(data)
-	//test(*figi)
+	data := &CandleData{}
+	if restore {
+		restoreStorage()
+		data = getStorageData(figi, interval)
+	} else {
+		data = initStorageData(figi, interval)
+		tinkoff.downloadCandlesByFigi(data)
+		fillIndicators(data)
+	}
+
+	test(data)
 }
 
 func test(data *CandleData) {
@@ -81,7 +90,7 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 								}
 
 								speed = (wallet - StartDeposit) / float64(rnSum)
-								if cnt >= 10 && rnSum != 0.0 {
+								if cnt >= 20 && rnSum != 0.0 {
 									if speed > /*(*maxSpeed)*0.9*/ 1000.0 {
 										show = true
 										if speed > *maxSpeed {
@@ -90,10 +99,10 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 									}
 								}
 
-								//if wallet-StartDeposit > *maxWallet {
-								//	*maxWallet = wallet
-								//	show = true
-								//}
+								if wallet-StartDeposit > *maxWallet {
+									*maxWallet = wallet
+									show = true
+								}
 
 								if show {
 									fmt.Printf("%s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s] \n️️",
@@ -106,11 +115,11 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 
 										color.New(color.FgHiBlue).Sprintf("%4s", indicatorType1),
 										color.New(color.FgWhite).Sprint(barType1),
-										color.New(color.FgHiWhite).Sprintf("%5.2f", coef1),
+										color.New(color.FgHiWhite).Sprintf("%2d", coef1),
 
 										color.New(color.FgHiBlue).Sprintf("%4s", indicatorType2),
 										color.New(color.FgWhite).Sprint(barType2),
-										color.New(color.FgHiWhite).Sprintf("%5.2f", coef2),
+										color.New(color.FgHiWhite).Sprintf("%2d", coef2),
 									)
 								}
 

@@ -13,50 +13,68 @@ import (
 	//_ "github.com/lib/pq"
 )
 
-var token = "t.ZNcVav8ge3MFAbSb0Y2ccwd-a9bPBkxKaPf0Yr_wD3Fc5tUpj8LX6gAg4RLlAUcIZm-KFKnImNMpeQf-2CmlbA"
-var client *tf.SandboxRestClient
-var streamClient *tf.StreamingClient
-var logger *log.Logger
+//var client *tf.SandboxRestClient
+//var streamClient *tf.StreamingClient
+//var logger *log.Logger
 
-func listenCandle(figi string, interval tf.CandleInterval) {
-	err := streamClient.SubscribeCandle(figi, interval, requestID())
-	if err != nil {
-		log.Fatalln(err)
-	}
+type Tinkoff struct {
+	ApiClient    *tf.SandboxRestClient
+	StreamClient *tf.StreamingClient
+	Account      *tf.Account
 }
 
-func registerClient() {
-	client = tf.NewSandboxRestClient(token)
+func (tinkoff *Tinkoff) register(token string) {
+	tinkoff.ApiClient = tf.NewSandboxRestClient(token)
+	tinkoff.Account = tinkoff.registerAccount()
+	tinkoff.Clear()
+	tinkoff.StreamClient = tinkoff.registerStreamClient(token)
+	tinkoff.setBalance(tf.USD, 10000)
+	tinkoff.initCandleListener()
+}
 
+func (tinkoff *Tinkoff) registerAccount() *tf.Account {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
 
 	log.Println("Регистрация обычного счета в песочнице")
-	account, err := client.Register(ctx, tf.AccountTinkoff)
+	account, err := tinkoff.ApiClient.Register(ctx, tf.AccountTinkoff)
 	if err != nil {
 		log.Fatalln(errorHandle(err))
 	}
 	log.Printf("%+v\n", account)
+	return &account
 }
 
-func registerStreamClient() {
-	logger = log.New(os.Stdout, "*", log.LstdFlags)
+func (tinkoff *Tinkoff) Clear() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	var err error
-	streamClient, err = tf.NewStreamingClient(logger, token)
+	err := tinkoff.ApiClient.Clear(ctx, tinkoff.Account.ID)
 	if err != nil {
 		log.Fatalln(err)
 	}
+}
 
+func (tinkoff *Tinkoff) registerStreamClient(token string) *tf.StreamingClient {
+	logger := log.New(os.Stdout, "*", log.LstdFlags)
+
+	streamClient, err := tf.NewStreamingClient(logger, token)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return streamClient
+}
+
+func (tinkoff *Tinkoff) initCandleListener() {
 	go func() {
-		err = streamClient.RunReadLoop(func(event interface{}) error {
-			logger.Printf("Got event %+v", event)
+		err := tinkoff.StreamClient.RunReadLoop(func(event interface{}) error {
+			fmt.Printf("-> %+v\n", event)
 			switch sdkEvent := event.(type) {
 			case tf.CandleEvent:
-				newCandleEvent(sdkEvent.Candle)
+				newCandleEvent(tinkoff, sdkEvent.Candle)
 				return nil
 			default:
-				logger.Printf("sdkEvent %+v", sdkEvent)
+				fmt.Printf("sdkEvent %+v", sdkEvent)
 			}
 
 			return nil
@@ -67,52 +85,48 @@ func registerStreamClient() {
 	}()
 }
 
-func newCandleEvent(c tf.Candle) {
-	data := getStorageData(c.FIGI, c.Interval)
-	data.upsertCandle(c)
-	data.save()
-	fmt.Printf("%v+", c)
-}
+func (tinkoff *Tinkoff) setBalance(currency tf.Currency, balance float64) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-func downloadCandlesByFigi(data *CandleData) {
-	data.Candles = make(map[BarType][]float64)
-
-	now := time.Now().AddDate(0, 0, 7)
-	start := now.AddDate(-3, 0, 0)
-	var apiCallCounter = 0
-	for start.Before(now) {
-		apiCallCounter += 1
-		if apiCallCounter > 490 {
-			fmt.Println("Sleep")
-			time.Sleep(time.Minute * time.Duration(2))
-			apiCallCounter = 1
-		}
-
-		downloadCandles(start, data)
-		start = start.AddDate(0, 0, 7)
+	err := tinkoff.ApiClient.SetCurrencyBalance(ctx, tinkoff.Account.ID, currency, balance)
+	if err != nil {
+		log.Fatalln(err)
 	}
 }
 
-func downloadCandles(tm time.Time, data *CandleData) {
+func (tinkoff *Tinkoff) downloadCandlesByFigi(data *CandleData) {
+	data.Candles = make(map[BarType][]float64)
+
+	endDate := time.Now().AddDate(0, 0, 7)
+	startDate := endDate.AddDate(-3, 0, 0)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
 
-	candles, err := client.Candles(ctx, tm.AddDate(0, 0, -7), tm, data.Interval, data.Figi)
-	if err != nil {
-		fmt.Sprintln(err)
-		log.Fatalln(err)
-	}
+	for startDate.Before(endDate) {
+		from := startDate
+		to := startDate.AddDate(0, 0, 7)
+		candles, err := tinkoff.ApiClient.Candles(ctx, from, to, data.Interval, data.Figi)
+		if err != nil {
+			fmt.Sprintln(err)
+			log.Fatalln(err)
+		}
 
-	if len(candles) == 0 {
-		return
-	}
+		if len(candles) == 0 {
+			break
+		}
 
-	for _, candle := range candles {
-		data.upsertCandle(candle)
+		for _, candle := range candles {
+			data.upsertCandle(candle)
+		}
+		//fmt.Println("Sleep")
+		//time.Sleep(time.Minute * time.Duration(2))
+		fmt.Printf("Кол-во свечей: %d\n", data.len())
+
+		startDate = to
 	}
 	data.save()
-	fmt.Printf("Кол-во свечей: %d\n", data.len())
-
 }
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
