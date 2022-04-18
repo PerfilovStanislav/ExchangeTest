@@ -67,7 +67,7 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, globalMaxWallet *float64, op 
 	show := false
 
 	for _, barType1 := range BarTypes {
-		for cl := 0; cl < 750; cl += 25 * 5000 {
+		for cl := 0; cl < 750; cl += 25 {
 			for _, barType2 := range BarTypes {
 				for _, indicatorType1 := range IndicatorTypes {
 					indicators1 := data.Indicators[indicatorType1]
