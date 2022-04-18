@@ -11,9 +11,11 @@ import (
 	"github.com/joho/godotenv"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
 	"runtime/pprof"
+	"time"
 )
 
 const StartDeposit = float64(100000.0)
@@ -32,8 +34,10 @@ func main() {
 	}()
 
 	Storage = make(map[string]map[tf.CandleInterval]CandleData)
+	//restoreStorage()
+	//restoreTestOperations()
 
-	//rand.Seed(time.Now().UnixNano())
+	rand.Seed(time.Now().UnixNano())
 	tinkoff := &Tinkoff{}
 	tinkoff.register(os.Getenv("token"))
 
@@ -43,9 +47,9 @@ func main() {
 	//defer cancel()
 	//p, _ := tinkoff.ApiClient.Portfolio(ctx, tinkoff.Account.ID)
 	//fmt.Printf("%+v", p)
-	backupStorage()
 
 	testHandler(tinkoff, false)
+	backupStorage()
 
 	//listenCandles(tinkoff)
 
