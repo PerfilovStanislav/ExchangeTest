@@ -33,7 +33,6 @@ func main() {
 
 	Storage = make(map[string]map[tf.CandleInterval]CandleData)
 	//restoreStorage()
-	//restoreTestOperations()
 
 	rand.Seed(time.Now().UnixNano())
 	tinkoff := &Tinkoff{}

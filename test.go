@@ -26,6 +26,7 @@ func testHandler(tinkoff *Tinkoff, restore bool) {
 	data := &CandleData{}
 	if restore {
 		restoreStorage()
+		restoreTestOperations(figi, interval)
 		data = getStorageData(figi, interval)
 	} else {
 		data = initStorageData(figi, interval)
@@ -33,7 +34,8 @@ func testHandler(tinkoff *Tinkoff, restore bool) {
 		fillIndicators(data)
 	}
 
-	test(data)
+	testFigi(data)
+	//testOperations(data)
 	backupTestOperations(figi, interval)
 }
 
@@ -42,18 +44,18 @@ func backupTestOperations(figi string, interval tf.CandleInterval) {
 	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s_%s.dat", figi, interval), dataOut, 0644)
 }
 
-func restoreTestOperations() {
-	dataIn := Decompress(ReadFromFile("test_operations.dat"))
+func restoreTestOperations(figi string, interval tf.CandleInterval) {
+	dataIn := Decompress(ReadFromFile(fmt.Sprintf("tests_%s_%s.dat", figi, interval)))
 	dec := gob.NewDecoder(bytes.NewReader(dataIn))
 	_ = dec.Decode(&tests)
 }
 
-func test(data *CandleData) {
+func testFigi(data *CandleData) {
 	var globalMaxSpeed = 0.0
 	var globalMaxWallet = StartDeposit
 
 	var wg sync.WaitGroup
-	for op := 0; op < 50; op += 5 {
+	for op := 0; op < 60; op += 5 {
 		wg.Add(1)
 		go testOp(&wg, &globalMaxSpeed, &globalMaxWallet, op, data)
 	}
@@ -180,4 +182,100 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 			}
 		}
 	}
+}
+
+func testOperations(data *CandleData) {
+	var wallet, openedPrice, speed, maxWallet, maxLoss float64
+	show := true
+
+	length := len(tests.TestOperations)
+	for x := 0; x < length-1; x++ {
+		for y := x; y < length; y++ {
+			operation1 := tests.TestOperations[x]
+			operation2 := tests.TestOperations[y]
+
+			wallet = StartDeposit
+			maxWallet = StartDeposit
+			maxLoss = 0
+			rnOpen := 0
+			rnSum := 0
+			openedCnt := 0
+			cnt := 0
+
+			var cl = 0
+			for i, _ := range data.Time {
+				if i == 0 {
+					continue
+				}
+
+				if openedCnt == 0 {
+					if 10000*data.getIndicatorRatio(operation1, i-1) >= float64(10000+operation1.Op) {
+						cl = operation1.Cl
+					} else if 10000*data.getIndicatorRatio(operation2, i-1) >= float64(10000+operation2.Op) {
+						cl = operation2.Cl
+					}
+					if cl > 0 {
+						openedPrice = data.Candles["O"][i]
+						openedCnt = int(wallet / (Commission + openedPrice))
+						wallet -= (Commission + openedPrice) * float64(openedCnt)
+						rnOpen = i
+					}
+				} else {
+					o := data.Candles["O"][i]
+					if o*10000/openedPrice >= float64(10000+cl) {
+						wallet += o * float64(openedCnt)
+
+						if wallet > maxWallet {
+							maxWallet = wallet
+						}
+
+						l := data.Candles["L"][i]
+						loss := 1 - l*float64(openedCnt)/maxWallet
+						if loss > maxLoss {
+							maxLoss = loss
+						}
+
+						cl = 0
+						openedCnt = 0
+						cnt++
+						rnSum += i - rnOpen
+					}
+				}
+
+			}
+
+			if openedCnt >= 1 {
+				wallet += (openedPrice + Commission) * float64(openedCnt)
+			}
+
+			speed = (wallet - StartDeposit) / float64(rnSum)
+
+			if show {
+				//fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
+				fmt.Printf("\n %s %s %s %s %s",
+					color.New(color.FgHiGreen).Sprintf("%6d", int(wallet-StartDeposit)),
+					color.New(color.BgBlue).Sprintf("%4d", cnt),
+					color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
+					color.New(color.FgHiRed).Sprintf("%7.2f", speed),
+
+					//color.New(color.FgHiBlue).Sprintf("%5s", indicatorType1),
+					//color.New(color.FgWhite).Sprint(barType1),
+					//color.New(color.FgHiWhite).Sprintf("%2d", coef1),
+					//
+					//color.New(color.FgHiBlue).Sprintf("%5s", indicatorType2),
+					//color.New(color.FgWhite).Sprint(barType2),
+					//color.New(color.FgHiWhite).Sprintf("%2d", coef2),
+					color.New(color.FgHiRed).Sprintf("%4.2f%%", (maxLoss)*100.0),
+				)
+			}
+		}
+	}
+}
+
+func (data *CandleData) getIndicatorValue(indicator IndicatorParameter) []float64 {
+	return data.Indicators[indicator.IndicatorType][indicator.Coef][indicator.BarType]
+}
+
+func (data *CandleData) getIndicatorRatio(operation OperationParameter, index int) float64 {
+	return data.getIndicatorValue(operation.Ind1)[index] / data.getIndicatorValue(operation.Ind2)[index]
 }
