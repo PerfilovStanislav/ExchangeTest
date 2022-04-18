@@ -34,12 +34,12 @@ func testHandler(tinkoff *Tinkoff, restore bool) {
 	}
 
 	test(data)
-	backupTestOperations()
+	backupTestOperations(figi, interval)
 }
 
-func backupTestOperations() {
+func backupTestOperations(figi string, interval tf.CandleInterval) {
 	dataOut := Compress(EncodeToBytes(tests))
-	_ = ioutil.WriteFile("test_operations.dat", dataOut, 0644)
+	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s_%s.dat", figi, interval), dataOut, 0644)
 }
 
 func restoreTestOperations() {
