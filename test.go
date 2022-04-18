@@ -34,12 +34,12 @@ func testHandler(tinkoff *Tinkoff, restore bool) {
 	}
 
 	test(data)
-	backupTestOperations()
+	backupTestOperations(figi, interval)
 }
 
-func backupTestOperations() {
+func backupTestOperations(figi string, interval tf.CandleInterval) {
 	dataOut := Compress(EncodeToBytes(tests))
-	_ = ioutil.WriteFile("test_operations.dat", dataOut, 0644)
+	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s_%s.dat", figi, interval), dataOut, 0644)
 }
 
 func restoreTestOperations() {
@@ -67,7 +67,7 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, globalMaxWallet *float64, op 
 	show := false
 
 	for _, barType1 := range BarTypes {
-		for cl := 0; cl < 750; cl += 25 * 5000 {
+		for cl := 0; cl < 750; cl += 25 {
 			for _, barType2 := range BarTypes {
 				for _, indicatorType1 := range IndicatorTypes {
 					indicators1 := data.Indicators[indicatorType1]
