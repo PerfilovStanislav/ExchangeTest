@@ -49,22 +49,22 @@ func restoreTestOperations() {
 }
 
 func test(data *CandleData) {
-	var maxSpeed = 0.0
-	var maxWallet = 0.0
+	var globalMaxSpeed = 0.0
+	var globalMaxWallet = StartDeposit
 
 	var wg sync.WaitGroup
 	for op := 0; op < 50; op += 5 {
 		wg.Add(1)
-		go testOp(&wg, &maxSpeed, &maxWallet, op, data)
+		go testOp(&wg, &globalMaxSpeed, &globalMaxWallet, op, data)
 	}
 	wg.Wait()
 }
 
-func testOp(wg *sync.WaitGroup, maxSpeed *float64, globalMaxWallet *float64, op int, data *CandleData) {
+func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float64, op int, data *CandleData) {
 	defer wg.Done()
 
 	var wallet, openedPrice, speed, maxWallet, maxLoss float64
-	show := false
+	var show bool
 
 	for _, barType1 := range BarTypes {
 		for cl := 0; cl < 750; cl += 25 {
@@ -78,6 +78,7 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, globalMaxWallet *float64, op 
 						out:
 							for coef2, bars2 := range indicators2 {
 
+								show = false
 								wallet = StartDeposit
 								maxWallet = StartDeposit
 								maxLoss = 0
@@ -111,7 +112,7 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, globalMaxWallet *float64, op 
 											loss := 1 - l*float64(openedCnt)/maxWallet
 											if loss > maxLoss {
 												maxLoss = loss
-												if maxLoss >= 0.02 {
+												if maxLoss >= 0.05 {
 													continue out
 												}
 											}
@@ -130,10 +131,10 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, globalMaxWallet *float64, op 
 
 								speed = (wallet - StartDeposit) / float64(rnSum)
 								if cnt >= 15 && rnSum != 0.0 {
-									if speed > /*(*maxSpeed)*0.9*/ 1000.0 {
+									if speed > /*(*globalMaxSpeed)*0.9*/ 1000.0 {
 										show = true
-										if speed > *maxSpeed {
-											*maxSpeed = speed
+										if speed > *globalMaxSpeed {
+											*globalMaxSpeed = speed
 										}
 									}
 								}
