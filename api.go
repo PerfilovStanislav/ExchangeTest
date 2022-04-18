@@ -25,11 +25,11 @@ type Tinkoff struct {
 
 func (tinkoff *Tinkoff) register(token string) {
 	tinkoff.ApiClient = tf.NewSandboxRestClient(token)
-	tinkoff.Account = tinkoff.registerAccount()
-	tinkoff.Clear()
-	tinkoff.StreamClient = tinkoff.registerStreamClient(token)
-	tinkoff.setBalance(tf.USD, 10000)
-	tinkoff.initCandleListener()
+	//tinkoff.Account = tinkoff.registerAccount()
+	//tinkoff.Clear()
+	//tinkoff.StreamClient = tinkoff.registerStreamClient(token)
+	//tinkoff.setBalance(tf.USD, 100000)
+	//tinkoff.initCandleListener()
 }
 
 func (tinkoff *Tinkoff) registerAccount() *tf.Account {

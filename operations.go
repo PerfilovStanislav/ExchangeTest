@@ -11,10 +11,10 @@ import (
 )
 
 type OperationParameter struct {
-	op, cl     float64
-	ind1, ind2 IndicatorParameter
-	figi       *string
-	interval   *tf.CandleInterval
+	Op, Cl     int
+	Ind1, Ind2 IndicatorParameter
+	Figi       *string
+	Interval   *tf.CandleInterval
 }
 
 type IndicatorParameter struct {
@@ -26,7 +26,7 @@ type IndicatorParameter struct {
 var OperationParameters = map[string]map[tf.CandleInterval][]OperationParameter{
 	"BBG000B9XRY4": {
 		tf.CandleInterval1Hour: []OperationParameter{
-			{1.003, 1.0025,
+			{30, 25,
 				IndicatorParameter{IndicatorTypeSma, Low, 3},
 				IndicatorParameter{IndicatorTypeDema, Close, 24},
 				nil, nil,
@@ -107,10 +107,10 @@ func (tinkoff *Tinkoff) Close(figi string, lots int) {
 
 func checkOpening(tinkoff *Tinkoff, data *CandleData, candle tf.Candle, parameter OperationParameter) {
 	i := data.index() - 1
-	val1 := parameter.ind1.getValue(data, i)
-	val2 := parameter.ind2.getValue(data, i)
+	val1 := parameter.Ind1.getValue(data, i)
+	val2 := parameter.Ind2.getValue(data, i)
 	tinkoff.Open(candle.FIGI, 1)
-	if val1/val2 >= parameter.op {
+	if val1*10000/val2 >= float64(10000+parameter.Op) {
 		tinkoff.Open(candle.FIGI, 1)
 	}
 }

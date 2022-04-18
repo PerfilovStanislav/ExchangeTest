@@ -1,14 +1,23 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	"github.com/fatih/color"
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
+	"io/ioutil"
 	"sync"
 	//_ "github.com/lib/pq"
 )
+
+type Tests struct {
+	TestOperations []OperationParameter
+}
+
+var tests Tests
 
 func testHandler(tinkoff *Tinkoff, restore bool) {
 	figi := "BBG000B9XRY4"
@@ -25,6 +34,18 @@ func testHandler(tinkoff *Tinkoff, restore bool) {
 	}
 
 	test(data)
+	backupTestOperations()
+}
+
+func backupTestOperations() {
+	dataOut := Compress(EncodeToBytes(tests))
+	_ = ioutil.WriteFile("test_operations.dat", dataOut, 0644)
+}
+
+func restoreTestOperations() {
+	dataIn := Decompress(ReadFromFile("test_operations.dat"))
+	dec := gob.NewDecoder(bytes.NewReader(dataIn))
+	_ = dec.Decode(&tests)
 }
 
 func test(data *CandleData) {
@@ -32,21 +53,21 @@ func test(data *CandleData) {
 	var maxWallet = 0.0
 
 	var wg sync.WaitGroup
-	for op := 1.0; op < 1.0050; op += 0.0005 {
+	for op := 0; op < 50; op += 5 {
 		wg.Add(1)
 		go testOp(&wg, &maxSpeed, &maxWallet, op, data)
 	}
 	wg.Wait()
 }
 
-func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float64, data *CandleData) {
+func testOp(wg *sync.WaitGroup, maxSpeed *float64, globalMaxWallet *float64, op int, data *CandleData) {
 	defer wg.Done()
 
-	var cl, wallet, openedPrice, speed float64
+	var wallet, openedPrice, speed, maxWallet, maxLoss float64
 	show := false
 
 	for _, barType1 := range BarTypes {
-		for cl = 1.0; cl < 1.1; cl += 0.00125 {
+		for cl := 0; cl < 750; cl += 25 * 5000 {
 			for _, barType2 := range BarTypes {
 				for _, indicatorType1 := range IndicatorTypes {
 					indicators1 := data.Indicators[indicatorType1]
@@ -54,9 +75,12 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 
 						for _, indicatorType2 := range IndicatorTypes {
 							indicators2 := data.Indicators[indicatorType2]
+						out:
 							for coef2, bars2 := range indicators2 {
 
 								wallet = StartDeposit
+								maxWallet = StartDeposit
+								maxLoss = 0
 								rnOpen := 0
 								rnSum := 0
 								openedCnt := 0
@@ -68,21 +92,36 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 									}
 
 									if openedCnt == 0 {
-										if bars1[barType1][i-1]/bars2[barType2][i-1] >= op {
+										if bars1[barType1][i-1]*10000/bars2[barType2][i-1] >= float64(10000+op) {
 											openedPrice = data.Candles["O"][i]
-											openedCnt = int(wallet / openedPrice)
+											openedCnt = int(wallet / (Commission + openedPrice))
 											wallet -= (Commission + openedPrice) * float64(openedCnt)
 											rnOpen = i
 										}
-									} else if data.Candles["O"][i]/openedPrice >= cl {
-										wallet += data.Candles["O"][i] * float64(openedCnt)
-										if wallet <= StartDeposit*0.85 {
-											break
+									} else {
+										o := data.Candles["O"][i]
+										if o*10000/openedPrice >= float64(10000+cl) {
+											wallet += o * float64(openedCnt)
+
+											if wallet > maxWallet {
+												maxWallet = wallet
+											}
+
+											l := data.Candles["L"][i]
+											loss := 1 - l*float64(openedCnt)/maxWallet
+											if loss > maxLoss {
+												maxLoss = loss
+												if maxLoss >= 0.02 {
+													continue out
+												}
+											}
+
+											openedCnt = 0
+											cnt++
+											rnSum += i - rnOpen
 										}
-										openedCnt = 0
-										cnt++
-										rnSum += i - rnOpen
 									}
+
 								}
 
 								if openedCnt >= 1 {
@@ -90,7 +129,7 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 								}
 
 								speed = (wallet - StartDeposit) / float64(rnSum)
-								if cnt >= 20 && rnSum != 0.0 {
+								if cnt >= 15 && rnSum != 0.0 {
 									if speed > /*(*maxSpeed)*0.9*/ 1000.0 {
 										show = true
 										if speed > *maxSpeed {
@@ -99,27 +138,35 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 									}
 								}
 
-								if wallet-StartDeposit > *maxWallet {
-									*maxWallet = wallet
+								if wallet > *globalMaxWallet {
+									*globalMaxWallet = wallet
 									show = true
 								}
 
 								if show {
-									fmt.Printf("%s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s] \n️️",
-										color.New(color.FgHiGreen).Sprint(int(wallet)),
+									tests.TestOperations = append(tests.TestOperations, OperationParameter{
+										op, cl,
+										IndicatorParameter{indicatorType1, barType1, coef1},
+										IndicatorParameter{indicatorType2, barType2, coef2},
+										&data.Figi, &data.Interval,
+									})
+
+									fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
+										color.New(color.FgHiGreen).Sprintf("%6d", int(wallet-StartDeposit)),
 										color.New(color.BgBlue).Sprintf("%4d", cnt),
 										color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
 										color.New(color.FgHiRed).Sprintf("%7.2f", speed),
-										color.New(color.BgHiGreen).Sprintf("%.4f", op),
-										color.New(color.BgHiRed).Sprintf("%.5f", cl),
+										color.New(color.BgHiGreen).Sprintf("%3d", op),
+										color.New(color.BgHiRed).Sprintf("%3d", cl),
 
-										color.New(color.FgHiBlue).Sprintf("%4s", indicatorType1),
+										color.New(color.FgHiBlue).Sprintf("%5s", indicatorType1),
 										color.New(color.FgWhite).Sprint(barType1),
 										color.New(color.FgHiWhite).Sprintf("%2d", coef1),
 
-										color.New(color.FgHiBlue).Sprintf("%4s", indicatorType2),
+										color.New(color.FgHiBlue).Sprintf("%5s", indicatorType2),
 										color.New(color.FgWhite).Sprint(barType2),
 										color.New(color.FgHiWhite).Sprintf("%2d", coef2),
+										color.New(color.FgHiRed).Sprintf("%4.2f%%", (maxLoss)*100.0),
 									)
 								}
 
@@ -132,5 +179,4 @@ func testOp(wg *sync.WaitGroup, maxSpeed *float64, maxWallet *float64, op float6
 			}
 		}
 	}
-	fmt.Println("===\n")
 }

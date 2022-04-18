@@ -16,7 +16,7 @@ const (
 	IndicatorTypeEma      IndicatorType = "ema"
 	IndicatorTypeDema     IndicatorType = "dema"
 	IndicatorTypeTema     IndicatorType = "tema"
-	IndicatorTypeTemaZero IndicatorType = "tema_zero"
+	IndicatorTypeTemaZero IndicatorType = "temaZ" // zero
 )
 
 var IndicatorTypes = []IndicatorType{
