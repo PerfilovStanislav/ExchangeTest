@@ -34,9 +34,9 @@ func testHandler(tinkoff *Tinkoff, restore bool) {
 		fillIndicators(data)
 	}
 
-	testFigi(data)
-	//testOperations(data)
-	backupTestOperations(figi, interval)
+	//testFigi(data)
+	testOperations(data)
+	//backupTestOperations(figi, interval)
 }
 
 func backupTestOperations(figi string, interval tf.CandleInterval) {
@@ -185,8 +185,8 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 }
 
 func testOperations(data *CandleData) {
-	var wallet, openedPrice, speed, maxWallet, maxLoss float64
-	show := true
+	var wallet, openedPrice, speed, maxWallet, maxSpeed, maxLoss float64
+	show := false
 
 	length := len(tests.TestOperations)
 	for x := 0; x < length-1; x++ {
@@ -250,6 +250,16 @@ func testOperations(data *CandleData) {
 
 			speed = (wallet - StartDeposit) / float64(rnSum)
 
+			if speed > (maxSpeed) {
+				show = true
+				maxSpeed = speed
+			}
+
+			if wallet > maxWallet {
+				maxWallet = wallet
+				show = true
+			}
+
 			if show {
 				//fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
 				fmt.Printf("\n %s %s %s %s %s",
@@ -268,6 +278,8 @@ func testOperations(data *CandleData) {
 					color.New(color.FgHiRed).Sprintf("%4.2f%%", (maxLoss)*100.0),
 				)
 			}
+
+			show = false
 		}
 	}
 }
