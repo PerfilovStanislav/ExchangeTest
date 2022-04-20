@@ -185,7 +185,7 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 }
 
 func testOperations(data *CandleData) {
-	var wallet, openedPrice, speed, maxWallet, maxSpeed, maxLoss float64
+	var wallet, openedPrice, speed, maxWallet, maxSpeed float64
 	show := false
 
 	length := len(tests.TestOperations)
@@ -197,8 +197,6 @@ func testOperations(data *CandleData) {
 				operation3 := tests.TestOperations[z]
 
 				wallet = StartDeposit
-				maxWallet = StartDeposit
-				maxLoss = 0
 				rnOpen := 0
 				rnSum := 0
 				openedCnt := 0
@@ -229,16 +227,6 @@ func testOperations(data *CandleData) {
 						if 10000*o/openedPrice >= float64(10000+cl) {
 							wallet += o * float64(openedCnt)
 
-							if wallet > maxWallet {
-								maxWallet = wallet
-							}
-
-							l := data.Candles["L"][i]
-							loss := 1 - l*float64(openedCnt)/maxWallet
-							if loss > maxLoss {
-								maxLoss = loss
-							}
-
 							cl = 0
 							openedCnt = 0
 							cnt++
@@ -254,7 +242,7 @@ func testOperations(data *CandleData) {
 
 				speed = (wallet - StartDeposit) / float64(rnSum)
 
-				if speed > (maxSpeed) {
+				if speed > maxSpeed {
 					show = true
 					maxSpeed = speed
 				}
@@ -266,20 +254,18 @@ func testOperations(data *CandleData) {
 
 				if show {
 					//fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
-					fmt.Printf("\n %s %s %s %s %s",
-						color.New(color.FgHiGreen).Sprintf("%6d", int(wallet-StartDeposit)),
+					fmt.Printf("\n %s %s %s %s %s %s %s",
+						color.New(color.FgHiGreen).Sprintf("%7d", int(wallet-StartDeposit)),
 						color.New(color.BgBlue).Sprintf("%4d", cnt),
 						color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
 						color.New(color.FgHiRed).Sprintf("%7.2f", speed),
-
-						//color.New(color.FgHiBlue).Sprintf("%5s", indicatorType1),
-						//color.New(color.FgWhite).Sprint(barType1),
-						//color.New(color.FgHiWhite).Sprintf("%2d", coef1),
+						showOperation(operation1),
+						showOperation(operation2),
+						showOperation(operation3),
 						//
 						//color.New(color.FgHiBlue).Sprintf("%5s", indicatorType2),
 						//color.New(color.FgWhite).Sprint(barType2),
 						//color.New(color.FgHiWhite).Sprintf("%2d", coef2),
-						color.New(color.FgHiRed).Sprintf("%4.2f%%", (maxLoss)*100.0),
 					)
 				}
 
@@ -287,6 +273,18 @@ func testOperations(data *CandleData) {
 			}
 		}
 	}
+}
+
+func showOperation(operation OperationParameter) string {
+	return fmt.Sprintf("{%s %s}", showIndicator(operation.Ind1), showIndicator(operation.Ind2))
+}
+
+func showIndicator(indicator IndicatorParameter) string {
+	return fmt.Sprintf("[%s %s %s]",
+		color.New(color.FgHiBlue).Sprintf("%5s", indicator.IndicatorType),
+		color.New(color.FgWhite).Sprint(indicator.BarType),
+		color.New(color.FgHiWhite).Sprintf("%2d", indicator.Coef),
+	)
 }
 
 func (data *CandleData) getIndicatorValue(indicator IndicatorParameter) []float64 {
