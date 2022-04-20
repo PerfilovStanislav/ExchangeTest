@@ -216,7 +216,7 @@ func testOperations(data *CandleData) {
 						} else if 10000*data.getIndicatorRatio(operation2, i-1) >= float64(10000+operation2.Op) {
 							cl = operation2.Cl
 						} else if 10000*data.getIndicatorRatio(operation3, i-1) >= float64(10000+operation3.Op) {
-							cl = operation2.Cl
+							cl = operation3.Cl
 						}
 						if cl > 0 {
 							openedPrice = data.Candles["O"][i]
