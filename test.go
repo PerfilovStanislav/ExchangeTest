@@ -132,8 +132,8 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 								}
 
 								speed = (wallet - StartDeposit) / float64(rnSum)
-								if cnt >= 15 && rnSum != 0.0 {
-									if speed > /*(*globalMaxSpeed)*0.9*/ 1000.0 {
+								if cnt >= 25 && rnSum != 0.0 {
+									if speed > (*globalMaxSpeed)*0.995 /* 1000.0*/ {
 										show = true
 										if speed > *globalMaxSpeed {
 											*globalMaxSpeed = speed
@@ -189,97 +189,102 @@ func testOperations(data *CandleData) {
 	show := false
 
 	length := len(tests.TestOperations)
-	for x := 0; x < length-1; x++ {
-		for y := x; y < length; y++ {
-			operation1 := tests.TestOperations[x]
-			operation2 := tests.TestOperations[y]
+	for x := 0; x < length; x++ {
+		for y := 0; y < length; y++ {
+			for z := 0; z < length; z++ {
+				operation1 := tests.TestOperations[x]
+				operation2 := tests.TestOperations[y]
+				operation3 := tests.TestOperations[z]
 
-			wallet = StartDeposit
-			maxWallet = StartDeposit
-			maxLoss = 0
-			rnOpen := 0
-			rnSum := 0
-			openedCnt := 0
-			cnt := 0
+				wallet = StartDeposit
+				maxWallet = StartDeposit
+				maxLoss = 0
+				rnOpen := 0
+				rnSum := 0
+				openedCnt := 0
+				cnt := 0
 
-			var cl = 0
-			for i, _ := range data.Time {
-				if i == 0 {
-					continue
+				var cl = 0
+				for i, _ := range data.Time {
+					if i == 0 {
+						continue
+					}
+
+					if openedCnt == 0 {
+						if 10000*data.getIndicatorRatio(operation1, i-1) >= float64(10000+operation1.Op) {
+							cl = operation1.Cl
+						} else if 10000*data.getIndicatorRatio(operation2, i-1) >= float64(10000+operation2.Op) {
+							cl = operation2.Cl
+						} else if 10000*data.getIndicatorRatio(operation3, i-1) >= float64(10000+operation3.Op) {
+							cl = operation2.Cl
+						}
+						if cl > 0 {
+							openedPrice = data.Candles["O"][i]
+							openedCnt = int(wallet / (Commission + openedPrice))
+							wallet -= (Commission + openedPrice) * float64(openedCnt)
+							rnOpen = i
+						}
+					} else {
+						o := data.Candles["O"][i]
+						if 10000*o/openedPrice >= float64(10000+cl) {
+							wallet += o * float64(openedCnt)
+
+							if wallet > maxWallet {
+								maxWallet = wallet
+							}
+
+							l := data.Candles["L"][i]
+							loss := 1 - l*float64(openedCnt)/maxWallet
+							if loss > maxLoss {
+								maxLoss = loss
+							}
+
+							cl = 0
+							openedCnt = 0
+							cnt++
+							rnSum += i - rnOpen
+						}
+					}
+
 				}
 
-				if openedCnt == 0 {
-					if 10000*data.getIndicatorRatio(operation1, i-1) >= float64(10000+operation1.Op) {
-						cl = operation1.Cl
-					} else if 10000*data.getIndicatorRatio(operation2, i-1) >= float64(10000+operation2.Op) {
-						cl = operation2.Cl
-					}
-					if cl > 0 {
-						openedPrice = data.Candles["O"][i]
-						openedCnt = int(wallet / (Commission + openedPrice))
-						wallet -= (Commission + openedPrice) * float64(openedCnt)
-						rnOpen = i
-					}
-				} else {
-					o := data.Candles["O"][i]
-					if o*10000/openedPrice >= float64(10000+cl) {
-						wallet += o * float64(openedCnt)
-
-						if wallet > maxWallet {
-							maxWallet = wallet
-						}
-
-						l := data.Candles["L"][i]
-						loss := 1 - l*float64(openedCnt)/maxWallet
-						if loss > maxLoss {
-							maxLoss = loss
-						}
-
-						cl = 0
-						openedCnt = 0
-						cnt++
-						rnSum += i - rnOpen
-					}
+				if openedCnt >= 1 {
+					wallet += (openedPrice + Commission) * float64(openedCnt)
 				}
 
+				speed = (wallet - StartDeposit) / float64(rnSum)
+
+				if speed > (maxSpeed) {
+					show = true
+					maxSpeed = speed
+				}
+
+				if wallet > maxWallet {
+					maxWallet = wallet
+					show = true
+				}
+
+				if show {
+					//fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
+					fmt.Printf("\n %s %s %s %s %s",
+						color.New(color.FgHiGreen).Sprintf("%6d", int(wallet-StartDeposit)),
+						color.New(color.BgBlue).Sprintf("%4d", cnt),
+						color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
+						color.New(color.FgHiRed).Sprintf("%7.2f", speed),
+
+						//color.New(color.FgHiBlue).Sprintf("%5s", indicatorType1),
+						//color.New(color.FgWhite).Sprint(barType1),
+						//color.New(color.FgHiWhite).Sprintf("%2d", coef1),
+						//
+						//color.New(color.FgHiBlue).Sprintf("%5s", indicatorType2),
+						//color.New(color.FgWhite).Sprint(barType2),
+						//color.New(color.FgHiWhite).Sprintf("%2d", coef2),
+						color.New(color.FgHiRed).Sprintf("%4.2f%%", (maxLoss)*100.0),
+					)
+				}
+
+				show = false
 			}
-
-			if openedCnt >= 1 {
-				wallet += (openedPrice + Commission) * float64(openedCnt)
-			}
-
-			speed = (wallet - StartDeposit) / float64(rnSum)
-
-			if speed > (maxSpeed) {
-				show = true
-				maxSpeed = speed
-			}
-
-			if wallet > maxWallet {
-				maxWallet = wallet
-				show = true
-			}
-
-			if show {
-				//fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
-				fmt.Printf("\n %s %s %s %s %s",
-					color.New(color.FgHiGreen).Sprintf("%6d", int(wallet-StartDeposit)),
-					color.New(color.BgBlue).Sprintf("%4d", cnt),
-					color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
-					color.New(color.FgHiRed).Sprintf("%7.2f", speed),
-
-					//color.New(color.FgHiBlue).Sprintf("%5s", indicatorType1),
-					//color.New(color.FgWhite).Sprint(barType1),
-					//color.New(color.FgHiWhite).Sprintf("%2d", coef1),
-					//
-					//color.New(color.FgHiBlue).Sprintf("%5s", indicatorType2),
-					//color.New(color.FgWhite).Sprint(barType2),
-					//color.New(color.FgHiWhite).Sprintf("%2d", coef2),
-					color.New(color.FgHiRed).Sprintf("%4.2f%%", (maxLoss)*100.0),
-				)
-			}
-
-			show = false
 		}
 	}
 }
