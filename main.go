@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/gob"
+	"flag"
 	"fmt"
 	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	_ "github.com/jackc/pgx"
@@ -19,8 +20,11 @@ import (
 const StartDeposit = float64(100000.0)
 const Commission = float64(0.06)
 
+var tinkoff Tinkoff
+
 func main() {
 	_ = godotenv.Load()
+	rand.Seed(time.Now().UnixNano())
 	//c := make(chan os.Signal, 1)
 	//signal.Notify(c, os.Interrupt, os.Kill)
 	//go func() {
@@ -31,26 +35,33 @@ func main() {
 	//	}
 	//}()
 
+	figi := *flag.String("figi", os.Getenv("figi"), "Figi")
+	interval := tf.CandleInterval(*flag.String("interval", os.Getenv("interval"), "Interval"))
+	//restore := flag.Bool("restore", os.Getenv("restore") == "true", "Restore")
+	isTestFigi := *flag.Bool("testFigi", os.Getenv("testFigi") == "true", "testFigi")
+	//testOperations := *flag.Bool("testFigi", os.Getenv("testFigi") == "true", "testFigi")
+	flag.Parse()
+
 	Storage = make(map[string]map[tf.CandleInterval]CandleData)
-	//restoreStorage()
 
-	rand.Seed(time.Now().UnixNano())
-	tinkoff := &Tinkoff{}
-	tinkoff.register(os.Getenv("token"))
+	if isTestFigi {
+		data := getStorageData(figi, interval)
+		tinkoff.downloadCandlesByFigi(data)
+		testFigi(data)
+		tests.backup(figi, interval)
+		data.backup()
+	}
 
-	//tinkoff.Open("BBG000B9XRY4", 2)
-	//tinkoff.Close("BBG000B9XRY4", 2)
-	//ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
-	//defer cancel()
-	//p, _ := tinkoff.ApiClient.Portfolio(ctx, tinkoff.Account.ID)
-	//fmt.Printf("%+v", p)
-
-	testHandler(tinkoff, false)
-	backupStorage()
-
-	//listenCandles(tinkoff)
-
-	//select {}
+	////tinkoff.Open("BBG000B9XRY4", 2)
+	////tinkoff.Close("BBG000B9XRY4", 2)
+	////ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	////defer cancel()
+	////p, _ := tinkoff.ApiClient.Portfolio(ctx, tinkoff.Account.ID)
+	////fmt.Printf("%+v", p)
+	//
+	////listenCandles(tinkoff)
+	//
+	////select {}
 }
 
 func EncodeToBytes(p interface{}) []byte {
@@ -85,15 +96,16 @@ func Decompress(s []byte) []byte {
 	return data
 }
 
-func restoreStorage() {
-	dataIn := Decompress(ReadFromFile("storage.dat"))
+func (data *CandleData) restore() {
+	dataIn := ReadFromFile(fmt.Sprintf("candles_%s_%s.dat", data.Figi, data.Interval))
 	dec := gob.NewDecoder(bytes.NewReader(dataIn))
-	_ = dec.Decode(&Storage)
+	_ = dec.Decode(data)
+	data.save()
 }
 
-func backupStorage() {
-	dataOut := Compress(EncodeToBytes(Storage))
-	_ = ioutil.WriteFile("storage.dat", dataOut, 0644)
+func (data *CandleData) backup() {
+	dataOut := EncodeToBytes(data)
+	_ = ioutil.WriteFile(fmt.Sprintf("candles_%s_%s.dat", data.Figi, data.Interval), dataOut, 0644)
 }
 
 func ReadFromFile(path string) []byte {

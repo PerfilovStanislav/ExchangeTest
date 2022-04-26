@@ -65,16 +65,20 @@ func initStorageData(figi string, interval tf.CandleInterval) *CandleData {
 }
 
 func getStorageData(figi string, interval tf.CandleInterval) *CandleData {
-	data := Storage[figi][interval]
+	data, ok := Storage[figi][interval]
+	if ok == false {
+		return initStorageData(figi, interval)
+	}
 	return &data
 }
 
 type CandleData struct {
-	Time       []time.Time
-	Candles    map[BarType][]float64
-	Indicators map[IndicatorType]map[int]map[BarType][]float64
-	Figi       string
-	Interval   tf.CandleInterval
+	Figi           string
+	Interval       tf.CandleInterval
+	Time           []time.Time
+	Candles        map[BarType][]float64
+	Indicators     map[IndicatorType]map[int]map[BarType][]float64
+	TestOperations []OperationParameter
 }
 
 func (data *CandleData) save() {
@@ -231,7 +235,7 @@ func fillIndicators(data *CandleData) {
 		data.Indicators[indicatorType] = make(map[int]map[BarType][]float64)
 	}
 
-	for n := 3; n <= 75; n++ {
+	for n := 3; n <= 70; n++ {
 		fmt.Println(n)
 		for _, indicatorType := range append(IndicatorTypes, AdditionalIndicatorTypes...) {
 			data.Indicators[indicatorType][n] = make(map[BarType][]float64)

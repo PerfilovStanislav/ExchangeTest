@@ -13,8 +13,8 @@ import (
 type OperationParameter struct {
 	Op, Cl     int
 	Ind1, Ind2 IndicatorParameter
-	Figi       *string
-	Interval   *tf.CandleInterval
+	Figi       string
+	Interval   tf.CandleInterval
 }
 
 type IndicatorParameter struct {
@@ -29,7 +29,7 @@ var OperationParameters = map[string]map[tf.CandleInterval][]OperationParameter{
 			{30, 25,
 				IndicatorParameter{IndicatorTypeSma, Low, 3},
 				IndicatorParameter{IndicatorTypeDema, Close, 24},
-				nil, nil,
+				"BBG000B9XRY4", tf.CandleInterval1Hour,
 			},
 		},
 		//tf.CandleInterval4Hour: []OperationParameter{{}},
@@ -87,7 +87,7 @@ func (tinkoff *Tinkoff) Open(figi string, lots int) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	placedOrder, err := tinkoff.ApiClient.MarketOrder(ctx, tf.DefaultAccount, figi, lots, tf.BUY)
+	placedOrder, err := tinkoff.getApiClient().MarketOrder(ctx, tf.DefaultAccount, figi, lots, tf.BUY)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -98,7 +98,7 @@ func (tinkoff *Tinkoff) Close(figi string, lots int) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	placedOrder, err := tinkoff.ApiClient.MarketOrder(ctx, tf.DefaultAccount, figi, lots, tf.SELL)
+	placedOrder, err := tinkoff.getApiClient().MarketOrder(ctx, tf.DefaultAccount, figi, lots, tf.SELL)
 	if err != nil {
 		log.Fatalln(err)
 	}

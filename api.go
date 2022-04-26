@@ -23,8 +23,15 @@ type Tinkoff struct {
 	Account      *tf.Account
 }
 
+func (tinkoff *Tinkoff) getApiClient() *tf.SandboxRestClient {
+	if tinkoff.ApiClient == nil {
+		tinkoff.ApiClient = tf.NewSandboxRestClient(os.Getenv("token"))
+	}
+	return tinkoff.ApiClient
+}
+
 func (tinkoff *Tinkoff) register(token string) {
-	tinkoff.ApiClient = tf.NewSandboxRestClient(token)
+	//tinkoff.ApiClient = tf.NewSandboxRestClient(token)
 	//tinkoff.Account = tinkoff.registerAccount()
 	//tinkoff.Clear()
 	//tinkoff.StreamClient = tinkoff.registerStreamClient(token)
@@ -37,7 +44,7 @@ func (tinkoff *Tinkoff) registerAccount() *tf.Account {
 	defer cancel()
 
 	log.Println("Регистрация обычного счета в песочнице")
-	account, err := tinkoff.ApiClient.Register(ctx, tf.AccountTinkoff)
+	account, err := tinkoff.getApiClient().Register(ctx, tf.AccountTinkoff)
 	if err != nil {
 		log.Fatalln(errorHandle(err))
 	}
@@ -49,7 +56,7 @@ func (tinkoff *Tinkoff) Clear() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := tinkoff.ApiClient.Clear(ctx, tinkoff.Account.ID)
+	err := tinkoff.getApiClient().Clear(ctx, tinkoff.Account.ID)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -89,7 +96,7 @@ func (tinkoff *Tinkoff) setBalance(currency tf.Currency, balance float64) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := tinkoff.ApiClient.SetCurrencyBalance(ctx, tinkoff.Account.ID, currency, balance)
+	err := tinkoff.getApiClient().SetCurrencyBalance(ctx, tinkoff.Account.ID, currency, balance)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -99,7 +106,7 @@ func (tinkoff *Tinkoff) downloadCandlesByFigi(data *CandleData) {
 	data.Candles = make(map[BarType][]float64)
 
 	endDate := time.Now().AddDate(0, 0, 7)
-	startDate := endDate.AddDate(-3, 0, 0)
+	startDate := endDate.AddDate(-1, 0, 0)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
@@ -107,7 +114,7 @@ func (tinkoff *Tinkoff) downloadCandlesByFigi(data *CandleData) {
 	for startDate.Before(endDate) {
 		from := startDate
 		to := startDate.AddDate(0, 0, 7)
-		candles, err := tinkoff.ApiClient.Candles(ctx, from, to, data.Interval, data.Figi)
+		candles, err := tinkoff.getApiClient().Candles(ctx, from, to, data.Interval, data.Figi)
 		if err != nil {
 			fmt.Sprintln(err)
 			log.Fatalln(err)

@@ -13,11 +13,12 @@ import (
 	//_ "github.com/lib/pq"
 )
 
-type Tests struct {
-	TestOperations []OperationParameter
-}
-
 var tests Tests
+
+type Tests struct {
+	MaxWalletOperations []OperationParameter
+	MaxSpeedOperations  []OperationParameter
+}
 
 func testHandler(tinkoff *Tinkoff, restore bool) {
 	figi := "BBG000B9XRY4"
@@ -25,8 +26,8 @@ func testHandler(tinkoff *Tinkoff, restore bool) {
 
 	data := &CandleData{}
 	if restore {
-		restoreStorage()
-		restoreTestOperations(figi, interval)
+		//restoreStorage()
+		//restoreTestOperations(figi, interval)
 		data = getStorageData(figi, interval)
 	} else {
 		data = initStorageData(figi, interval)
@@ -36,16 +37,24 @@ func testHandler(tinkoff *Tinkoff, restore bool) {
 
 	//testFigi(data)
 	testOperations(data)
-	//backupTestOperations(figi, interval)
 }
 
-func backupTestOperations(figi string, interval tf.CandleInterval) {
-	dataOut := Compress(EncodeToBytes(tests))
+func (tests Tests) backup(figi string, interval tf.CandleInterval) {
+	tests.MaxWalletOperations = tests.MaxWalletOperations[maxInt(len(tests.MaxWalletOperations)-3, 0):]
+	tests.MaxSpeedOperations = tests.MaxSpeedOperations[maxInt(len(tests.MaxSpeedOperations)-100, 0):]
+	dataOut := EncodeToBytes(tests)
 	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s_%s.dat", figi, interval), dataOut, 0644)
 }
 
-func restoreTestOperations(figi string, interval tf.CandleInterval) {
-	dataIn := Decompress(ReadFromFile(fmt.Sprintf("tests_%s_%s.dat", figi, interval)))
+func maxInt(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
+}
+
+func (tests Tests) restore(figi string, interval tf.CandleInterval) {
+	dataIn := ReadFromFile(fmt.Sprintf("tests_%s_%s.dat", figi, interval))
 	dec := gob.NewDecoder(bytes.NewReader(dataIn))
 	_ = dec.Decode(&tests)
 }
@@ -66,7 +75,7 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 	defer wg.Done()
 
 	var wallet, openedPrice, speed, maxWallet, maxLoss float64
-	var show bool
+	var saveOperation int
 
 	for _, barType1 := range BarTypes {
 		for cl := 0; cl < 750; cl += 25 {
@@ -80,7 +89,7 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 						out:
 							for coef2, bars2 := range indicators2 {
 
-								show = false
+								saveOperation = 0
 								wallet = StartDeposit
 								maxWallet = StartDeposit
 								maxLoss = 0
@@ -131,28 +140,34 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 									wallet += (openedPrice + Commission) * float64(openedCnt)
 								}
 
+								if wallet > *globalMaxWallet {
+									*globalMaxWallet = wallet
+									saveOperation += 1
+								}
+
 								speed = (wallet - StartDeposit) / float64(rnSum)
-								if cnt >= 25 && rnSum != 0.0 {
+								if cnt >= 25 && rnSum > 1 {
 									if speed > (*globalMaxSpeed)*0.995 /* 1000.0*/ {
-										show = true
+										saveOperation += 1
 										if speed > *globalMaxSpeed {
 											*globalMaxSpeed = speed
 										}
 									}
 								}
 
-								if wallet > *globalMaxWallet {
-									*globalMaxWallet = wallet
-									show = true
-								}
-
-								if show {
-									tests.TestOperations = append(tests.TestOperations, OperationParameter{
+								if saveOperation > 0 {
+									operation := OperationParameter{
 										op, cl,
 										IndicatorParameter{indicatorType1, barType1, coef1},
 										IndicatorParameter{indicatorType2, barType2, coef2},
-										&data.Figi, &data.Interval,
-									})
+										data.Figi, data.Interval,
+									}
+									if saveOperation&1 == 1 {
+										tests.MaxWalletOperations = append(tests.MaxWalletOperations, operation)
+									}
+									if saveOperation&2 == 2 {
+										tests.MaxSpeedOperations = append(tests.MaxSpeedOperations, operation)
+									}
 
 									fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
 										color.New(color.FgHiGreen).Sprintf("%6d", int(wallet-StartDeposit)),
@@ -173,8 +188,6 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 									)
 								}
 
-								show = false
-
 							}
 						}
 					}
@@ -188,13 +201,13 @@ func testOperations(data *CandleData) {
 	var wallet, openedPrice, speed, maxWallet, maxSpeed float64
 	show := false
 
-	length := len(tests.TestOperations)
+	length := len(tests.MaxWalletOperations)
 	for x := 0; x < length; x++ {
 		for y := 0; y < length; y++ {
 			for z := 0; z < length; z++ {
-				operation1 := tests.TestOperations[x]
-				operation2 := tests.TestOperations[y]
-				operation3 := tests.TestOperations[z]
+				operation1 := tests.MaxWalletOperations[x]
+				operation2 := tests.MaxWalletOperations[y]
+				operation3 := tests.MaxWalletOperations[z]
 
 				wallet = StartDeposit
 				rnOpen := 0
