@@ -20,25 +20,6 @@ type Tests struct {
 	MaxSpeedOperations  []OperationParameter
 }
 
-func testHandler(tinkoff *Tinkoff, restore bool) {
-	figi := "BBG000B9XRY4"
-	interval := tf.CandleInterval1Hour
-
-	data := &CandleData{}
-	if restore {
-		//restoreStorage()
-		//restoreTestOperations(figi, interval)
-		data = getStorageData(figi, interval)
-	} else {
-		data = initStorageData(figi, interval)
-		tinkoff.downloadCandlesByFigi(data)
-		fillIndicators(data)
-	}
-
-	//testFigi(data)
-	testOperations(data)
-}
-
 func (tests Tests) backup(figi string, interval tf.CandleInterval) {
 	tests.MaxWalletOperations = tests.MaxWalletOperations[maxInt(len(tests.MaxWalletOperations)-3, 0):]
 	tests.MaxSpeedOperations = tests.MaxSpeedOperations[maxInt(len(tests.MaxSpeedOperations)-100, 0):]
@@ -59,9 +40,9 @@ func (tests Tests) restore(figi string, interval tf.CandleInterval) {
 	_ = dec.Decode(&tests)
 }
 
-func testFigi(data *CandleData) {
+func (data *CandleData) testFigi() {
 	var globalMaxSpeed = 0.0
-	var globalMaxWallet = StartDeposit
+	var globalMaxWallet = 0.0
 
 	var wg sync.WaitGroup
 	for op := 0; op < 60; op += 5 {

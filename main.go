@@ -47,7 +47,8 @@ func main() {
 	if isTestFigi {
 		data := getStorageData(figi, interval)
 		tinkoff.downloadCandlesByFigi(data)
-		testFigi(data)
+		data.fillIndicators()
+		data.testFigi()
 		tests.backup(figi, interval)
 		data.backup()
 	}

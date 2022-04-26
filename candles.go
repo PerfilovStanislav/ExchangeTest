@@ -228,7 +228,7 @@ func (data *CandleData) getTemaZero(n, i int, barType BarType) float64 {
 	return data.get(IndicatorTypeTemaZero, data.calculateTemaZero, n, i, barType)
 }
 
-func fillIndicators(data *CandleData) {
+func (data *CandleData) fillIndicators() {
 	l := data.index()
 
 	for _, indicatorType := range append(IndicatorTypes, AdditionalIndicatorTypes...) {
