@@ -72,7 +72,7 @@ func listenCandles(tinkoff *Tinkoff) {
 }
 
 func newCandleEvent(tinkoff *Tinkoff, candle tf.Candle) {
-	data := getStorageData(candle.FIGI, candle.Interval)
+	data := getCandleData(candle.FIGI, candle.Interval)
 
 	if data.upsertCandle(candle) {
 		for _, parameter := range OperationParameters[candle.FIGI][candle.Interval] {

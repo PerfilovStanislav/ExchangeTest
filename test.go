@@ -13,16 +13,43 @@ import (
 	//_ "github.com/lib/pq"
 )
 
-var tests Tests
-
-type Tests struct {
+type TestData struct {
+	Figi                string
+	Interval            tf.CandleInterval
 	MaxWalletOperations []OperationParameter
 	MaxSpeedOperations  []OperationParameter
 }
 
-func (tests Tests) backup(figi string, interval tf.CandleInterval) {
-	tests.MaxWalletOperations = tests.MaxWalletOperations[maxInt(len(tests.MaxWalletOperations)-3, 0):]
-	tests.MaxSpeedOperations = tests.MaxSpeedOperations[maxInt(len(tests.MaxSpeedOperations)-100, 0):]
+var TestStorage map[string]map[tf.CandleInterval]TestData
+
+func initTestData(figi string, interval tf.CandleInterval) *TestData {
+	if _, found := TestStorage[figi]; false == found {
+		TestStorage[figi] = make(map[tf.CandleInterval]TestData)
+	}
+	data := TestStorage[figi][interval]
+	data.Figi = figi
+	data.Interval = interval
+	return &data
+}
+
+func getTestData(figi string, interval tf.CandleInterval) *TestData {
+	data, ok := TestStorage[figi][interval]
+	if ok == false {
+		return initTestData(figi, interval)
+	}
+	return &data
+}
+
+//var tests Tests
+//
+//type Tests struct {
+//	MaxWalletOperations []OperationParameter
+//	MaxSpeedOperations  []OperationParameter
+//}
+
+func (tests TestData) backup(figi string, interval tf.CandleInterval) {
+	tests.MaxWalletOperations = tests.MaxWalletOperations[maxInt(len(tests.MaxWalletOperations)-20, 0):]
+	tests.MaxSpeedOperations = tests.MaxSpeedOperations[maxInt(len(tests.MaxSpeedOperations)-80, 0):]
 	dataOut := EncodeToBytes(tests)
 	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s_%s.dat", figi, interval), dataOut, 0644)
 }
@@ -34,7 +61,7 @@ func maxInt(x, y int) int {
 	return y
 }
 
-func (tests Tests) restore(figi string, interval tf.CandleInterval) {
+func (tests TestData) restore(figi string, interval tf.CandleInterval) {
 	dataIn := ReadFromFile(fmt.Sprintf("tests_%s_%s.dat", figi, interval))
 	dec := gob.NewDecoder(bytes.NewReader(dataIn))
 	_ = dec.Decode(&tests)

@@ -51,38 +51,37 @@ var BarTypes = [4]BarType{
 	Open, Close, High, Low,
 }
 
-var Storage map[string]map[tf.CandleInterval]CandleData
+type CandleData struct {
+	Figi       string
+	Interval   tf.CandleInterval
+	Time       []time.Time
+	Candles    map[BarType][]float64
+	Indicators map[IndicatorType]map[int]map[BarType][]float64
+}
 
-func initStorageData(figi string, interval tf.CandleInterval) *CandleData {
-	if _, found := Storage[figi]; false == found {
-		Storage[figi] = make(map[tf.CandleInterval]CandleData)
+var CandleStorage map[string]map[tf.CandleInterval]CandleData
+
+func initCandleData(figi string, interval tf.CandleInterval) *CandleData {
+	if _, found := CandleStorage[figi]; false == found {
+		CandleStorage[figi] = make(map[tf.CandleInterval]CandleData)
 	}
-	data := Storage[figi][interval]
+	data := CandleStorage[figi][interval]
 	data.Indicators = make(map[IndicatorType]map[int]map[BarType][]float64)
 	data.Figi = figi
 	data.Interval = interval
 	return &data
 }
 
-func getStorageData(figi string, interval tf.CandleInterval) *CandleData {
-	data, ok := Storage[figi][interval]
+func getCandleData(figi string, interval tf.CandleInterval) *CandleData {
+	data, ok := CandleStorage[figi][interval]
 	if ok == false {
-		return initStorageData(figi, interval)
+		return initCandleData(figi, interval)
 	}
 	return &data
 }
 
-type CandleData struct {
-	Figi           string
-	Interval       tf.CandleInterval
-	Time           []time.Time
-	Candles        map[BarType][]float64
-	Indicators     map[IndicatorType]map[int]map[BarType][]float64
-	TestOperations []OperationParameter
-}
-
 func (data *CandleData) save() {
-	Storage[data.Figi][data.Interval] = *data
+	CandleStorage[data.Figi][data.Interval] = *data
 }
 
 func (data *CandleData) len() int {
