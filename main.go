@@ -14,7 +14,9 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -50,8 +52,6 @@ func main() {
 		tinkoff.downloadCandlesByFigi(data)
 		data.fillIndicators()
 		data.testFigi()
-		tests.backup(figi, interval)
-		data.backup()
 	}
 
 	if envTestOperations != "" {
@@ -123,22 +123,22 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func (data *CandleData) restore() bool {
-	fileName := fmt.Sprintf("candles_%s_%s.dat", data.Figi, data.Interval)
+func (candleData *CandleData) restore() bool {
+	fileName := fmt.Sprintf("candles_%s_%s.dat", candleData.Figi, candleData.Interval)
 	if !fileExists(fileName) {
 		return false
 	}
 	dataIn := ReadFromFile(fileName)
 	dec := gob.NewDecoder(bytes.NewReader(dataIn))
-	_ = dec.Decode(data)
-	data.save()
+	_ = dec.Decode(candleData)
+	candleData.save()
 
 	return true
 }
 
-func (data *CandleData) backup() {
-	dataOut := EncodeToBytes(data)
-	_ = ioutil.WriteFile(fmt.Sprintf("candles_%s_%s.dat", data.Figi, data.Interval), dataOut, 0644)
+func (candleData *CandleData) backup() {
+	dataOut := EncodeToBytes(candleData)
+	_ = ioutil.WriteFile(fmt.Sprintf("candles_%s_%s.dat", candleData.Figi, candleData.Interval), dataOut, 0644)
 }
 
 func ReadFromFile(path string) []byte {
@@ -153,4 +153,33 @@ func ReadFromFile(path string) []byte {
 	}
 
 	return data
+}
+
+// parallel processes the data in separate goroutines.
+func parallel(start, stop int, fn func(<-chan int)) {
+	count := stop - start
+	if count < 1 {
+		return
+	}
+
+	procs := runtime.GOMAXPROCS(0)
+	if procs > count {
+		procs = count
+	}
+
+	c := make(chan int, count)
+	for i := start; i < stop; i++ {
+		c <- i
+	}
+	close(c)
+
+	var wg sync.WaitGroup
+	for i := 0; i < procs; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fn(c)
+		}()
+	}
+	wg.Wait()
 }

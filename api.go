@@ -106,7 +106,8 @@ func (tinkoff *Tinkoff) downloadCandlesByFigi(data *CandleData) {
 	data.Candles = make(map[BarType][]float64)
 
 	endDate := time.Now().AddDate(0, 0, 7)
-	startDate := endDate.AddDate(-3, 0, 0)
+	//startDate := endDate.AddDate(-3, 0, 0)
+	startDate := endDate.AddDate(0, 0, -14)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()

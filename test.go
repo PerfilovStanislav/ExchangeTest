@@ -47,11 +47,11 @@ func getTestData(figi string, interval tf.CandleInterval) *TestData {
 //	MaxSpeedOperations  []OperationParameter
 //}
 
-func (tests TestData) backup(figi string, interval tf.CandleInterval) {
-	tests.MaxWalletOperations = tests.MaxWalletOperations[maxInt(len(tests.MaxWalletOperations)-20, 0):]
-	tests.MaxSpeedOperations = tests.MaxSpeedOperations[maxInt(len(tests.MaxSpeedOperations)-80, 0):]
-	dataOut := EncodeToBytes(tests)
-	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s_%s.dat", figi, interval), dataOut, 0644)
+func (data TestData) backup() {
+	data.MaxWalletOperations = data.MaxWalletOperations[maxInt(len(data.MaxWalletOperations)-20, 0):]
+	data.MaxSpeedOperations = data.MaxSpeedOperations[maxInt(len(data.MaxSpeedOperations)-80, 0):]
+	dataOut := EncodeToBytes(data)
+	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s_%s.dat", data.Figi, data.Interval), dataOut, 0644)
 }
 
 func maxInt(x, y int) int {
@@ -67,19 +67,24 @@ func (tests TestData) restore(figi string, interval tf.CandleInterval) {
 	_ = dec.Decode(&tests)
 }
 
-func (data *CandleData) testFigi() {
+func (candleData *CandleData) testFigi() {
+	testData := getTestData(candleData.Figi, candleData.Interval)
+
 	var globalMaxSpeed = 0.0
 	var globalMaxWallet = 0.0
 
 	var wg sync.WaitGroup
 	for op := 0; op < 60; op += 5 {
 		wg.Add(1)
-		go testOp(&wg, &globalMaxSpeed, &globalMaxWallet, op, data)
+		go testOp(&wg, &globalMaxSpeed, &globalMaxWallet, op, candleData, testData)
 	}
 	wg.Wait()
+
+	candleData.backup()
+	testData.backup()
 }
 
-func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float64, op int, data *CandleData) {
+func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleData *CandleData, testData *TestData) {
 	defer wg.Done()
 
 	var wallet, openedPrice, speed, maxWallet, maxLoss float64
@@ -89,11 +94,11 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 		for cl := 0; cl < 750; cl += 25 {
 			for _, barType2 := range BarTypes {
 				for _, indicatorType1 := range IndicatorTypes {
-					indicators1 := data.Indicators[indicatorType1]
+					indicators1 := candleData.Indicators[indicatorType1]
 					for coef1, bars1 := range indicators1 {
 
 						for _, indicatorType2 := range IndicatorTypes {
-							indicators2 := data.Indicators[indicatorType2]
+							indicators2 := candleData.Indicators[indicatorType2]
 						out:
 							for coef2, bars2 := range indicators2 {
 
@@ -106,20 +111,20 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 								openedCnt := 0
 								cnt := 0
 
-								for i, _ := range data.Time {
+								for i, _ := range candleData.Time {
 									if i == 0 {
 										continue
 									}
 
 									if openedCnt == 0 {
 										if bars1[barType1][i-1]*10000/bars2[barType2][i-1] >= float64(10000+op) {
-											openedPrice = data.Candles["O"][i]
+											openedPrice = candleData.Candles["O"][i]
 											openedCnt = int(wallet / (Commission + openedPrice))
 											wallet -= (Commission + openedPrice) * float64(openedCnt)
 											rnOpen = i
 										}
 									} else {
-										o := data.Candles["O"][i]
+										o := candleData.Candles["O"][i]
 										if o*10000/openedPrice >= float64(10000+cl) {
 											wallet += o * float64(openedCnt)
 
@@ -127,7 +132,7 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 												maxWallet = wallet
 											}
 
-											l := data.Candles["L"][i]
+											l := candleData.Candles["L"][i]
 											loss := 1 - l*float64(openedCnt)/maxWallet
 											if loss > maxLoss {
 												maxLoss = loss
@@ -168,13 +173,13 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 										op, cl,
 										IndicatorParameter{indicatorType1, barType1, coef1},
 										IndicatorParameter{indicatorType2, barType2, coef2},
-										data.Figi, data.Interval,
+										candleData.Figi, candleData.Interval,
 									}
 									if saveOperation&1 == 1 {
-										tests.MaxWalletOperations = append(tests.MaxWalletOperations, operation)
+										testData.MaxWalletOperations = append(testData.MaxWalletOperations, operation)
 									}
 									if saveOperation&2 == 2 {
-										tests.MaxSpeedOperations = append(tests.MaxSpeedOperations, operation)
+										testData.MaxSpeedOperations = append(testData.MaxSpeedOperations, operation)
 									}
 
 									fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
@@ -205,96 +210,96 @@ func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float6
 	}
 }
 
-func testOperations(data *CandleData) {
-	var wallet, openedPrice, speed, maxWallet, maxSpeed float64
-	show := false
-
-	length := len(tests.MaxWalletOperations)
-	for x := 0; x < length; x++ {
-		for y := 0; y < length; y++ {
-			for z := 0; z < length; z++ {
-				operation1 := tests.MaxWalletOperations[x]
-				operation2 := tests.MaxWalletOperations[y]
-				operation3 := tests.MaxWalletOperations[z]
-
-				wallet = StartDeposit
-				rnOpen := 0
-				rnSum := 0
-				openedCnt := 0
-				cnt := 0
-
-				var cl = 0
-				for i, _ := range data.Time {
-					if i == 0 {
-						continue
-					}
-
-					if openedCnt == 0 {
-						if 10000*data.getIndicatorRatio(operation1, i-1) >= float64(10000+operation1.Op) {
-							cl = operation1.Cl
-						} else if 10000*data.getIndicatorRatio(operation2, i-1) >= float64(10000+operation2.Op) {
-							cl = operation2.Cl
-						} else if 10000*data.getIndicatorRatio(operation3, i-1) >= float64(10000+operation3.Op) {
-							cl = operation3.Cl
-						}
-						if cl > 0 {
-							openedPrice = data.Candles["O"][i]
-							openedCnt = int(wallet / (Commission + openedPrice))
-							wallet -= (Commission + openedPrice) * float64(openedCnt)
-							rnOpen = i
-						}
-					} else {
-						o := data.Candles["O"][i]
-						if 10000*o/openedPrice >= float64(10000+cl) {
-							wallet += o * float64(openedCnt)
-
-							cl = 0
-							openedCnt = 0
-							cnt++
-							rnSum += i - rnOpen
-						}
-					}
-
-				}
-
-				if openedCnt >= 1 {
-					wallet += (openedPrice + Commission) * float64(openedCnt)
-				}
-
-				speed = (wallet - StartDeposit) / float64(rnSum)
-
-				if speed > maxSpeed {
-					show = true
-					maxSpeed = speed
-				}
-
-				if wallet > maxWallet {
-					maxWallet = wallet
-					show = true
-				}
-
-				if show {
-					//fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
-					fmt.Printf("\n %s %s %s %s %s %s %s",
-						color.New(color.FgHiGreen).Sprintf("%7d", int(wallet-StartDeposit)),
-						color.New(color.BgBlue).Sprintf("%4d", cnt),
-						color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
-						color.New(color.FgHiRed).Sprintf("%7.2f", speed),
-						showOperation(operation1),
-						showOperation(operation2),
-						showOperation(operation3),
-						//
-						//color.New(color.FgHiBlue).Sprintf("%5s", indicatorType2),
-						//color.New(color.FgWhite).Sprint(barType2),
-						//color.New(color.FgHiWhite).Sprintf("%2d", coef2),
-					)
-				}
-
-				show = false
-			}
-		}
-	}
-}
+//func testOperations(data *CandleData) {
+//	var wallet, openedPrice, speed, maxWallet, maxSpeed float64
+//	show := false
+//
+//	length := len(tests.MaxWalletOperations)
+//	for x := 0; x < length; x++ {
+//		for y := 0; y < length; y++ {
+//			for z := 0; z < length; z++ {
+//				operation1 := tests.MaxWalletOperations[x]
+//				operation2 := tests.MaxWalletOperations[y]
+//				operation3 := tests.MaxWalletOperations[z]
+//
+//				wallet = StartDeposit
+//				rnOpen := 0
+//				rnSum := 0
+//				openedCnt := 0
+//				cnt := 0
+//
+//				var cl = 0
+//				for i, _ := range data.Time {
+//					if i == 0 {
+//						continue
+//					}
+//
+//					if openedCnt == 0 {
+//						if 10000*data.getIndicatorRatio(operation1, i-1) >= float64(10000+operation1.Op) {
+//							cl = operation1.Cl
+//						} else if 10000*data.getIndicatorRatio(operation2, i-1) >= float64(10000+operation2.Op) {
+//							cl = operation2.Cl
+//						} else if 10000*data.getIndicatorRatio(operation3, i-1) >= float64(10000+operation3.Op) {
+//							cl = operation3.Cl
+//						}
+//						if cl > 0 {
+//							openedPrice = data.Candles["O"][i]
+//							openedCnt = int(wallet / (Commission + openedPrice))
+//							wallet -= (Commission + openedPrice) * float64(openedCnt)
+//							rnOpen = i
+//						}
+//					} else {
+//						o := data.Candles["O"][i]
+//						if 10000*o/openedPrice >= float64(10000+cl) {
+//							wallet += o * float64(openedCnt)
+//
+//							cl = 0
+//							openedCnt = 0
+//							cnt++
+//							rnSum += i - rnOpen
+//						}
+//					}
+//
+//				}
+//
+//				if openedCnt >= 1 {
+//					wallet += (openedPrice + Commission) * float64(openedCnt)
+//				}
+//
+//				speed = (wallet - StartDeposit) / float64(rnSum)
+//
+//				if speed > maxSpeed {
+//					show = true
+//					maxSpeed = speed
+//				}
+//
+//				if wallet > maxWallet {
+//					maxWallet = wallet
+//					show = true
+//				}
+//
+//				if show {
+//					//fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
+//					fmt.Printf("\n %s %s %s %s %s %s %s",
+//						color.New(color.FgHiGreen).Sprintf("%7d", int(wallet-StartDeposit)),
+//						color.New(color.BgBlue).Sprintf("%4d", cnt),
+//						color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
+//						color.New(color.FgHiRed).Sprintf("%7.2f", speed),
+//						showOperation(operation1),
+//						showOperation(operation2),
+//						showOperation(operation3),
+//						//
+//						//color.New(color.FgHiBlue).Sprintf("%5s", indicatorType2),
+//						//color.New(color.FgWhite).Sprint(barType2),
+//						//color.New(color.FgHiWhite).Sprintf("%2d", coef2),
+//					)
+//				}
+//
+//				show = false
+//			}
+//		}
+//	}
+//}
 
 func showOperation(operation OperationParameter) string {
 	return fmt.Sprintf("{%s %s}", showIndicator(operation.Ind1), showIndicator(operation.Ind2))
@@ -308,10 +313,10 @@ func showIndicator(indicator IndicatorParameter) string {
 	)
 }
 
-func (data *CandleData) getIndicatorValue(indicator IndicatorParameter) []float64 {
-	return data.Indicators[indicator.IndicatorType][indicator.Coef][indicator.BarType]
+func (candleData *CandleData) getIndicatorValue(indicator IndicatorParameter) []float64 {
+	return candleData.Indicators[indicator.IndicatorType][indicator.Coef][indicator.BarType]
 }
 
-func (data *CandleData) getIndicatorRatio(operation OperationParameter, index int) float64 {
-	return data.getIndicatorValue(operation.Ind1)[index] / data.getIndicatorValue(operation.Ind2)[index]
+func (candleData *CandleData) getIndicatorRatio(operation OperationParameter, index int) float64 {
+	return candleData.getIndicatorValue(operation.Ind1)[index] / candleData.getIndicatorValue(operation.Ind2)[index]
 }

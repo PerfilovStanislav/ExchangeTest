@@ -80,172 +80,172 @@ func getCandleData(figi string, interval tf.CandleInterval) *CandleData {
 	return &data
 }
 
-func (data *CandleData) save() {
-	CandleStorage[data.Figi][data.Interval] = *data
+func (candleData *CandleData) save() {
+	CandleStorage[candleData.Figi][candleData.Interval] = *candleData
 }
 
-func (data *CandleData) len() int {
-	return len(data.Time)
+func (candleData *CandleData) len() int {
+	return len(candleData.Time)
 }
 
-func (data *CandleData) index() int {
-	return data.len() - 1
+func (candleData *CandleData) index() int {
+	return candleData.len() - 1
 }
 
-func (data *CandleData) lastTime() time.Time {
-	return data.Time[data.index()]
+func (candleData *CandleData) lastTime() time.Time {
+	return candleData.Time[candleData.index()]
 }
 
-func (data *CandleData) upsertCandle(c tf.Candle) bool {
-	l := data.index()
-	if l >= 0 && data.Time[l].Equal(c.TS) {
-		data.Time[l] = c.TS
-		data.Candles["O"][l] = c.OpenPrice
-		data.Candles["C"][l] = c.ClosePrice
-		data.Candles["H"][l] = c.HighPrice
-		data.Candles["L"][l] = c.LowPrice
+func (candleData *CandleData) upsertCandle(c tf.Candle) bool {
+	l := candleData.index()
+	if l >= 0 && candleData.Time[l].Equal(c.TS) {
+		candleData.Time[l] = c.TS
+		candleData.Candles["O"][l] = c.OpenPrice
+		candleData.Candles["C"][l] = c.ClosePrice
+		candleData.Candles["H"][l] = c.HighPrice
+		candleData.Candles["L"][l] = c.LowPrice
 		return false
 	} else {
-		data.Time = append(data.Time, c.TS)
-		data.Candles["O"] = append(data.Candles["O"], c.OpenPrice)
-		data.Candles["C"] = append(data.Candles["C"], c.ClosePrice)
-		data.Candles["H"] = append(data.Candles["H"], c.HighPrice)
-		data.Candles["L"] = append(data.Candles["L"], c.LowPrice)
+		candleData.Time = append(candleData.Time, c.TS)
+		candleData.Candles["O"] = append(candleData.Candles["O"], c.OpenPrice)
+		candleData.Candles["C"] = append(candleData.Candles["C"], c.ClosePrice)
+		candleData.Candles["H"] = append(candleData.Candles["H"], c.HighPrice)
+		candleData.Candles["L"] = append(candleData.Candles["L"], c.LowPrice)
 		return true
 	}
 }
 
-func (data *CandleData) calculateSma(n, i int, barType BarType) float64 {
+func (candleData *CandleData) calculateSma(n, i int, barType BarType) float64 {
 	if i >= n {
-		return data.getSma(n, i-1, barType) + (data.getCandle(n, i, barType)-data.getCandle(n, i-n, barType))/float64(n)
+		return candleData.getSma(n, i-1, barType) + (candleData.getCandle(n, i, barType)-candleData.getCandle(n, i-n, barType))/float64(n)
 	} else if i > 0 {
-		return (data.getSma(n, i-1, barType)*float64(i) + data.getCandle(n, i, barType)) / float64(i+1)
+		return (candleData.getSma(n, i-1, barType)*float64(i) + candleData.getCandle(n, i, barType)) / float64(i+1)
 	}
-	return data.getCandle(n, 0, barType)
+	return candleData.getCandle(n, 0, barType)
 }
 
-func (data *CandleData) calculateDema(n, i int, barType BarType) float64 {
-	return 2*data.getEma(n, i, barType) - data.get2Ema(n, i, barType)
+func (candleData *CandleData) calculateDema(n, i int, barType BarType) float64 {
+	return 2*candleData.getEma(n, i, barType) - candleData.get2Ema(n, i, barType)
 }
 
-func (data *CandleData) calculateTema(n, i int, barType BarType) float64 {
-	return 3*(data.getEma(n, i, barType)-data.get2Ema(n, i, barType)) + data.get3Ema(n, i, barType)
+func (candleData *CandleData) calculateTema(n, i int, barType BarType) float64 {
+	return 3*(candleData.getEma(n, i, barType)-candleData.get2Ema(n, i, barType)) + candleData.get3Ema(n, i, barType)
 }
 
-func (data *CandleData) calculateEma(source, prev funGet, n, i int, barType BarType) float64 {
+func (candleData *CandleData) calculateEma(source, prev funGet, n, i int, barType BarType) float64 {
 	if i > 0 {
 		return (source(n, i, barType)*float64(n) + float64(100-n)*prev(n, i-1, barType)) * 0.01
 	}
-	return data.Candles[barType][i]
+	return candleData.Candles[barType][i]
 }
 
-func (data *CandleData) calculate2Tema(n, i int, barType BarType) float64 {
-	return 3*(data.getEmaTema(n, i, barType)-data.get2EmaTema(n, i, barType)) + data.get3EmaTema(n, i, barType)
+func (candleData *CandleData) calculate2Tema(n, i int, barType BarType) float64 {
+	return 3*(candleData.getEmaTema(n, i, barType)-candleData.get2EmaTema(n, i, barType)) + candleData.get3EmaTema(n, i, barType)
 }
 
-func (data *CandleData) calculateTemaZero(n, i int, barType BarType) float64 {
-	return 2*data.getTema(n, i, barType) - data.get2Tema(n, i, barType)
+func (candleData *CandleData) calculateTemaZero(n, i int, barType BarType) float64 {
+	return 2*candleData.getTema(n, i, barType) - candleData.get2Tema(n, i, barType)
 }
 
 type funGet func(n, i int, barType BarType) float64
 type funEma func(source, prev funGet, n, i int, barType BarType) float64
 
 // GET
-func (data *CandleData) getCandle(n, i int, barType BarType) float64 {
-	return data.Candles[barType][i]
+func (candleData *CandleData) getCandle(n, i int, barType BarType) float64 {
+	return candleData.Candles[barType][i]
 }
 
-func (data *CandleData) get(indicatorType IndicatorType, fun funGet, n, i int, barType BarType) float64 {
-	arr := data.Indicators[indicatorType][n][barType]
+func (candleData *CandleData) get(indicatorType IndicatorType, fun funGet, n, i int, barType BarType) float64 {
+	arr := candleData.Indicators[indicatorType][n][barType]
 	if len(arr) > i {
 		return arr[i]
 	}
 
 	for k := len(arr); k <= i; k++ {
 		arr = append(arr, fun(n, k, barType))
-		data.Indicators[indicatorType][n][barType] = arr
+		candleData.Indicators[indicatorType][n][barType] = arr
 	}
 
 	return arr[i]
 }
 
-func (data *CandleData) ema(indicatorType IndicatorType, fun funEma, source, prev funGet, n, i int, barType BarType) float64 {
-	arr := data.Indicators[indicatorType][n][barType]
+func (candleData *CandleData) ema(indicatorType IndicatorType, fun funEma, source, prev funGet, n, i int, barType BarType) float64 {
+	arr := candleData.Indicators[indicatorType][n][barType]
 	if len(arr) > i {
 		return arr[i]
 	}
 
 	for k := len(arr); k <= i; k++ {
 		arr = append(arr, fun(source, prev, n, k, barType))
-		data.Indicators[indicatorType][n][barType] = arr
+		candleData.Indicators[indicatorType][n][barType] = arr
 	}
 
 	return arr[i]
 }
 
-func (data *CandleData) getSma(n, i int, barType BarType) float64 {
-	return data.get(IndicatorTypeSma, data.calculateSma, n, i, barType)
+func (candleData *CandleData) getSma(n, i int, barType BarType) float64 {
+	return candleData.get(IndicatorTypeSma, candleData.calculateSma, n, i, barType)
 }
 
-func (data *CandleData) getEma(n, i int, barType BarType) float64 {
-	return data.ema(IndicatorTypeEma, data.calculateEma, data.getCandle, data.getEma, n, i, barType)
+func (candleData *CandleData) getEma(n, i int, barType BarType) float64 {
+	return candleData.ema(IndicatorTypeEma, candleData.calculateEma, candleData.getCandle, candleData.getEma, n, i, barType)
 }
 
-func (data *CandleData) get2Ema(n, i int, barType BarType) float64 {
-	return data.ema(IndicatorType2Ema, data.calculateEma, data.getEma, data.get2Ema, n, i, barType)
+func (candleData *CandleData) get2Ema(n, i int, barType BarType) float64 {
+	return candleData.ema(IndicatorType2Ema, candleData.calculateEma, candleData.getEma, candleData.get2Ema, n, i, barType)
 }
 
-func (data *CandleData) get3Ema(n, i int, barType BarType) float64 {
-	return data.ema(IndicatorType3Ema, data.calculateEma, data.get2Ema, data.get3Ema, n, i, barType)
+func (candleData *CandleData) get3Ema(n, i int, barType BarType) float64 {
+	return candleData.ema(IndicatorType3Ema, candleData.calculateEma, candleData.get2Ema, candleData.get3Ema, n, i, barType)
 }
 
-func (data *CandleData) getDema(n, i int, barType BarType) float64 {
-	return data.get(IndicatorTypeDema, data.calculateDema, n, i, barType)
+func (candleData *CandleData) getDema(n, i int, barType BarType) float64 {
+	return candleData.get(IndicatorTypeDema, candleData.calculateDema, n, i, barType)
 }
 
-func (data *CandleData) getTema(n, i int, barType BarType) float64 {
-	return data.get(IndicatorTypeTema, data.calculateTema, n, i, barType)
+func (candleData *CandleData) getTema(n, i int, barType BarType) float64 {
+	return candleData.get(IndicatorTypeTema, candleData.calculateTema, n, i, barType)
 }
 
-func (data *CandleData) getEmaTema(n, i int, barType BarType) float64 {
-	return data.ema(IndicatorTypeEmaTema, data.calculateEma, data.getTema, data.getEmaTema, n, i, barType)
+func (candleData *CandleData) getEmaTema(n, i int, barType BarType) float64 {
+	return candleData.ema(IndicatorTypeEmaTema, candleData.calculateEma, candleData.getTema, candleData.getEmaTema, n, i, barType)
 }
 
-func (data *CandleData) get2EmaTema(n, i int, barType BarType) float64 {
-	return data.ema(IndicatorType2EmaTema, data.calculateEma, data.getEmaTema, data.get2EmaTema, n, i, barType)
+func (candleData *CandleData) get2EmaTema(n, i int, barType BarType) float64 {
+	return candleData.ema(IndicatorType2EmaTema, candleData.calculateEma, candleData.getEmaTema, candleData.get2EmaTema, n, i, barType)
 }
 
-func (data *CandleData) get3EmaTema(n, i int, barType BarType) float64 {
-	return data.ema(IndicatorType3EmaTema, data.calculateEma, data.get2EmaTema, data.get3EmaTema, n, i, barType)
+func (candleData *CandleData) get3EmaTema(n, i int, barType BarType) float64 {
+	return candleData.ema(IndicatorType3EmaTema, candleData.calculateEma, candleData.get2EmaTema, candleData.get3EmaTema, n, i, barType)
 }
 
-func (data *CandleData) get2Tema(n, i int, barType BarType) float64 {
-	return data.get(IndicatorType2Tema, data.calculate2Tema, n, i, barType)
+func (candleData *CandleData) get2Tema(n, i int, barType BarType) float64 {
+	return candleData.get(IndicatorType2Tema, candleData.calculate2Tema, n, i, barType)
 }
 
-func (data *CandleData) getTemaZero(n, i int, barType BarType) float64 {
-	return data.get(IndicatorTypeTemaZero, data.calculateTemaZero, n, i, barType)
+func (candleData *CandleData) getTemaZero(n, i int, barType BarType) float64 {
+	return candleData.get(IndicatorTypeTemaZero, candleData.calculateTemaZero, n, i, barType)
 }
 
-func (data *CandleData) fillIndicators() {
-	l := data.index()
+func (candleData *CandleData) fillIndicators() {
+	l := candleData.index()
 
 	for _, indicatorType := range append(IndicatorTypes, AdditionalIndicatorTypes...) {
-		data.Indicators[indicatorType] = make(map[int]map[BarType][]float64)
+		candleData.Indicators[indicatorType] = make(map[int]map[BarType][]float64)
 	}
 
 	for n := 3; n <= 70; n++ {
 		fmt.Println(n)
 		for _, indicatorType := range append(IndicatorTypes, AdditionalIndicatorTypes...) {
-			data.Indicators[indicatorType][n] = make(map[BarType][]float64)
+			candleData.Indicators[indicatorType][n] = make(map[BarType][]float64)
 		}
 
 		for _, barType := range BarTypes {
-			data.getSma(n, l, barType)
-			data.getEma(n, l, barType)
-			data.getDema(n, l, barType)
-			data.getTema(n, l, barType)
-			data.getTemaZero(n, l, barType)
+			candleData.getSma(n, l, barType)
+			candleData.getEma(n, l, barType)
+			candleData.getDema(n, l, barType)
+			candleData.getTema(n, l, barType)
+			candleData.getTemaZero(n, l, barType)
 		}
 	}
 }
