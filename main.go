@@ -46,12 +46,18 @@ func main() {
 	CandleStorage = make(map[string]map[tf.CandleInterval]CandleData)
 	TestStorage = make(map[string]map[tf.CandleInterval]TestData)
 
+	parallel(0, 10, func(ys <-chan int) {
+		for y := range ys {
+			fmt.Println(y)
+		}
+	})
+	fmt.Println('x')
+
 	if envTestFigi != "" {
 		figi, interval := getFigiAndInterval(envTestFigi)
-		data := getCandleData(figi, interval)
-		tinkoff.downloadCandlesByFigi(data)
-		data.fillIndicators()
-		data.testFigi()
+		candleData := getCandleData(figi, interval)
+		tinkoff.downloadCandlesByFigi(candleData)
+		candleData.testFigi()
 	}
 
 	if envTestOperations != "" {
@@ -59,9 +65,14 @@ func main() {
 		for _, param := range envTestOperationParams {
 			figi, interval := getFigiAndInterval(param)
 
-			data := getCandleData(figi, interval)
-			if !data.restore() {
-				tinkoff.downloadCandlesByFigi(data)
+			candleData := getCandleData(figi, interval)
+			if !candleData.restore() {
+				tinkoff.downloadCandlesByFigi(candleData)
+			}
+
+			testData := getTestData(figi, interval)
+			if !testData.restore() {
+				candleData.testFigi()
 			}
 		}
 	}
@@ -121,24 +132,6 @@ func fileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
-}
-
-func (candleData *CandleData) restore() bool {
-	fileName := fmt.Sprintf("candles_%s_%s.dat", candleData.Figi, candleData.Interval)
-	if !fileExists(fileName) {
-		return false
-	}
-	dataIn := ReadFromFile(fileName)
-	dec := gob.NewDecoder(bytes.NewReader(dataIn))
-	_ = dec.Decode(candleData)
-	candleData.save()
-
-	return true
-}
-
-func (candleData *CandleData) backup() {
-	dataOut := EncodeToBytes(candleData)
-	_ = ioutil.WriteFile(fmt.Sprintf("candles_%s_%s.dat", candleData.Figi, candleData.Interval), dataOut, 0644)
 }
 
 func ReadFromFile(path string) []byte {

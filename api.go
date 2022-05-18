@@ -102,8 +102,8 @@ func (tinkoff *Tinkoff) setBalance(currency tf.Currency, balance float64) {
 	}
 }
 
-func (tinkoff *Tinkoff) downloadCandlesByFigi(data *CandleData) {
-	data.Candles = make(map[BarType][]float64)
+func (tinkoff *Tinkoff) downloadCandlesByFigi(candleData *CandleData) {
+	candleData.Candles = make(map[BarType][]float64)
 
 	endDate := time.Now().AddDate(0, 0, 7)
 	//startDate := endDate.AddDate(-3, 0, 0)
@@ -115,7 +115,7 @@ func (tinkoff *Tinkoff) downloadCandlesByFigi(data *CandleData) {
 	for startDate.Before(endDate) {
 		from := startDate
 		to := startDate.AddDate(0, 0, 7)
-		candles, err := tinkoff.getApiClient().Candles(ctx, from, to, data.Interval, data.Figi)
+		candles, err := tinkoff.getApiClient().Candles(ctx, from, to, candleData.Interval, candleData.Figi)
 		if err != nil {
 			fmt.Sprintln(err)
 			log.Fatalln(err)
@@ -126,15 +126,18 @@ func (tinkoff *Tinkoff) downloadCandlesByFigi(data *CandleData) {
 		}
 
 		for _, candle := range candles {
-			data.upsertCandle(candle)
+			candleData.upsertCandle(candle)
 		}
 		//fmt.Println("Sleep")
 		//time.Sleep(time.Minute * time.Duration(2))
-		fmt.Printf("Кол-во свечей: %d\n", data.len())
+		fmt.Printf("Кол-во свечей: %d\n", candleData.len())
 
 		startDate = to
 	}
-	data.save()
+
+	candleData.fillIndicators()
+	candleData.backup()
+	candleData.save()
 }
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")

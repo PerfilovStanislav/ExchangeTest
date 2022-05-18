@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
+	"io/ioutil"
 	"time"
 	//_ "github.com/lib/pq"
 )
@@ -78,6 +81,24 @@ func getCandleData(figi string, interval tf.CandleInterval) *CandleData {
 		return initCandleData(figi, interval)
 	}
 	return &data
+}
+
+func (candleData *CandleData) restore() bool {
+	fileName := fmt.Sprintf("candles_%s_%s.dat", candleData.Figi, candleData.Interval)
+	if !fileExists(fileName) {
+		return false
+	}
+	dataIn := ReadFromFile(fileName)
+	dec := gob.NewDecoder(bytes.NewReader(dataIn))
+	_ = dec.Decode(candleData)
+	candleData.save()
+
+	return true
+}
+
+func (candleData *CandleData) backup() {
+	dataOut := EncodeToBytes(candleData)
+	_ = ioutil.WriteFile(fmt.Sprintf("candles_%s_%s.dat", candleData.Figi, candleData.Interval), dataOut, 0644)
 }
 
 func (candleData *CandleData) save() {

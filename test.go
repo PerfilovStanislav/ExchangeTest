@@ -40,18 +40,23 @@ func getTestData(figi string, interval tf.CandleInterval) *TestData {
 	return &data
 }
 
-//var tests Tests
-//
-//type Tests struct {
-//	MaxWalletOperations []OperationParameter
-//	MaxSpeedOperations  []OperationParameter
-//}
+func (testData *TestData) restore() bool {
+	fileName := fmt.Sprintf("tests_%s_%s.dat", testData.Figi, testData.Interval)
+	if !fileExists(fileName) {
+		return false
+	}
+	dataIn := ReadFromFile(fileName)
+	dec := gob.NewDecoder(bytes.NewReader(dataIn))
+	_ = dec.Decode(&testData)
 
-func (data TestData) backup() {
-	data.MaxWalletOperations = data.MaxWalletOperations[maxInt(len(data.MaxWalletOperations)-20, 0):]
-	data.MaxSpeedOperations = data.MaxSpeedOperations[maxInt(len(data.MaxSpeedOperations)-80, 0):]
-	dataOut := EncodeToBytes(data)
-	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s_%s.dat", data.Figi, data.Interval), dataOut, 0644)
+	return true
+}
+
+func (testData TestData) backup() {
+	testData.MaxWalletOperations = testData.MaxWalletOperations[maxInt(len(testData.MaxWalletOperations)-20, 0):]
+	testData.MaxSpeedOperations = testData.MaxSpeedOperations[maxInt(len(testData.MaxSpeedOperations)-80, 0):]
+	dataOut := EncodeToBytes(testData)
+	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s_%s.dat", testData.Figi, testData.Interval), dataOut, 0644)
 }
 
 func maxInt(x, y int) int {
@@ -59,12 +64,6 @@ func maxInt(x, y int) int {
 		return x
 	}
 	return y
-}
-
-func (tests TestData) restore(figi string, interval tf.CandleInterval) {
-	dataIn := ReadFromFile(fmt.Sprintf("tests_%s_%s.dat", figi, interval))
-	dec := gob.NewDecoder(bytes.NewReader(dataIn))
-	_ = dec.Decode(&tests)
 }
 
 func (candleData *CandleData) testFigi() {
@@ -80,7 +79,6 @@ func (candleData *CandleData) testFigi() {
 	}
 	wg.Wait()
 
-	candleData.backup()
 	testData.backup()
 }
 
