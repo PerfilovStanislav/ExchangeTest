@@ -46,13 +46,6 @@ func main() {
 	CandleStorage = make(map[string]map[tf.CandleInterval]CandleData)
 	TestStorage = make(map[string]map[tf.CandleInterval]TestData)
 
-	parallel(0, 10, func(ys <-chan int) {
-		for y := range ys {
-			fmt.Println(y)
-		}
-	})
-	fmt.Println('x')
-
 	if envTestFigi != "" {
 		figi, interval := getFigiAndInterval(envTestFigi)
 		candleData := getCandleData(figi, interval)

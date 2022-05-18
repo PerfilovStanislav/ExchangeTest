@@ -9,7 +9,6 @@ import (
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
 	"io/ioutil"
-	"sync"
 	//_ "github.com/lib/pq"
 )
 
@@ -72,19 +71,22 @@ func (candleData *CandleData) testFigi() {
 	var globalMaxSpeed = 0.0
 	var globalMaxWallet = 0.0
 
-	var wg sync.WaitGroup
-	for op := 0; op < 60; op += 5 {
-		wg.Add(1)
-		go testOp(&wg, &globalMaxSpeed, &globalMaxWallet, op, candleData, testData)
-	}
-	wg.Wait()
+	parallel(0, 12, func(ys <-chan int) {
+		for y := range ys {
+			testOp(&globalMaxSpeed, &globalMaxWallet, y*5, candleData, testData)
+		}
+	})
+	//var wg sync.WaitGroup
+	//for op := 0; op < 60; op += 5 {
+	//	wg.Add(1)
+	//	go testOp(&wg, &globalMaxSpeed, &globalMaxWallet, op, candleData, testData)
+	//}
+	//wg.Wait()
 
 	testData.backup()
 }
 
-func testOp(wg *sync.WaitGroup, globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleData *CandleData, testData *TestData) {
-	defer wg.Done()
-
+func testOp(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleData *CandleData, testData *TestData) {
 	var wallet, openedPrice, speed, maxWallet, maxLoss float64
 	var saveOperation int
 

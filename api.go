@@ -105,9 +105,9 @@ func (tinkoff *Tinkoff) setBalance(currency tf.Currency, balance float64) {
 func (tinkoff *Tinkoff) downloadCandlesByFigi(candleData *CandleData) {
 	candleData.Candles = make(map[BarType][]float64)
 
-	endDate := time.Now().AddDate(0, 0, 7)
+	endDate := time.Now().AddDate(0, 0, 0)
 	//startDate := endDate.AddDate(-3, 0, 0)
-	startDate := endDate.AddDate(0, 0, -14)
+	startDate := endDate.AddDate(0, -1, 0)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
