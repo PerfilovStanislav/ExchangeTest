@@ -55,36 +55,33 @@ var BarTypes = [4]BarType{
 }
 
 type CandleData struct {
-	Figi       string
-	Interval   tf.CandleInterval
+	FigiInterval string
+	//Figi       string
+	//Interval   tf.CandleInterval
 	Time       []time.Time
 	Candles    map[BarType][]float64
 	Indicators map[IndicatorType]map[int]map[BarType][]float64
 }
 
-var CandleStorage map[string]map[tf.CandleInterval]CandleData
+var CandleStorage map[string]CandleData
 
-func initCandleData(figi string, interval tf.CandleInterval) *CandleData {
-	if _, found := CandleStorage[figi]; false == found {
-		CandleStorage[figi] = make(map[tf.CandleInterval]CandleData)
-	}
-	data := CandleStorage[figi][interval]
-	data.Indicators = make(map[IndicatorType]map[int]map[BarType][]float64)
-	data.Figi = figi
-	data.Interval = interval
-	return &data
+func initCandleData(figiInterval string) *CandleData {
+	candleData := CandleStorage[figiInterval]
+	candleData.Indicators = make(map[IndicatorType]map[int]map[BarType][]float64)
+	candleData.FigiInterval = figiInterval
+	return &candleData
 }
 
-func getCandleData(figi string, interval tf.CandleInterval) *CandleData {
-	data, ok := CandleStorage[figi][interval]
+func getCandleData(figiInterval string) *CandleData {
+	candleData, ok := CandleStorage[figiInterval]
 	if ok == false {
-		return initCandleData(figi, interval)
+		return initCandleData(figiInterval)
 	}
-	return &data
+	return &candleData
 }
 
 func (candleData *CandleData) restore() bool {
-	fileName := fmt.Sprintf("candles_%s_%s.dat", candleData.Figi, candleData.Interval)
+	fileName := fmt.Sprintf("candles_%s.dat", candleData.FigiInterval)
 	if !fileExists(fileName) {
 		return false
 	}
@@ -98,12 +95,16 @@ func (candleData *CandleData) restore() bool {
 
 func (candleData *CandleData) backup() {
 	dataOut := EncodeToBytes(candleData)
-	_ = ioutil.WriteFile(fmt.Sprintf("candles_%s_%s.dat", candleData.Figi, candleData.Interval), dataOut, 0644)
+	_ = ioutil.WriteFile(fmt.Sprintf("candles_%s.dat", candleData.FigiInterval), dataOut, 0644)
 }
 
 func (candleData *CandleData) save() {
-	CandleStorage[candleData.Figi][candleData.Interval] = *candleData
+	CandleStorage[candleData.FigiInterval] = *candleData
 }
+
+//func (candleData *CandleData) getFigiInterval() string {
+//	return figiInterval(candleData.Figi, candleData.Interval)
+//}
 
 func (candleData *CandleData) len() int {
 	return len(candleData.Time)

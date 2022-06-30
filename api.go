@@ -78,7 +78,7 @@ func (tinkoff *Tinkoff) initCandleListener() {
 			fmt.Printf("-> %+v\n", event)
 			switch sdkEvent := event.(type) {
 			case tf.CandleEvent:
-				newCandleEvent(tinkoff, sdkEvent.Candle)
+				//newCandleEvent(tinkoff, sdkEvent.Candle)
 				return nil
 			default:
 				fmt.Printf("sdkEvent %+v", sdkEvent)
@@ -107,7 +107,7 @@ func (tinkoff *Tinkoff) downloadCandlesByFigi(candleData *CandleData) {
 
 	endDate := time.Now().AddDate(0, 0, 0)
 	//startDate := endDate.AddDate(-3, 0, 0)
-	startDate := endDate.AddDate(0, -1, 0)
+	startDate := endDate.AddDate(-3, 0, 0)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
@@ -115,7 +115,9 @@ func (tinkoff *Tinkoff) downloadCandlesByFigi(candleData *CandleData) {
 	for startDate.Before(endDate) {
 		from := startDate
 		to := startDate.AddDate(0, 0, 7)
-		candles, err := tinkoff.getApiClient().Candles(ctx, from, to, candleData.Interval, candleData.Figi)
+
+		figi, interval := getFigiAndInterval(candleData.FigiInterval)
+		candles, err := tinkoff.getApiClient().Candles(ctx, from, to, interval, figi)
 		if err != nil {
 			fmt.Sprintln(err)
 			log.Fatalln(err)
@@ -136,8 +138,8 @@ func (tinkoff *Tinkoff) downloadCandlesByFigi(candleData *CandleData) {
 	}
 
 	candleData.fillIndicators()
-	candleData.backup()
 	candleData.save()
+	candleData.backup()
 }
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")

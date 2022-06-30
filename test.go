@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	"github.com/fatih/color"
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
@@ -13,34 +12,33 @@ import (
 )
 
 type TestData struct {
-	Figi                string
-	Interval            tf.CandleInterval
+	FigiInterval string
+	//Figi                string
+	//Interval            tf.CandleInterval
 	MaxWalletOperations []OperationParameter
 	MaxSpeedOperations  []OperationParameter
+	TotalOperations     []OperationParameter
+	CandleData          *CandleData
 }
 
-var TestStorage map[string]map[tf.CandleInterval]TestData
+var TestStorage map[string]TestData
 
-func initTestData(figi string, interval tf.CandleInterval) *TestData {
-	if _, found := TestStorage[figi]; false == found {
-		TestStorage[figi] = make(map[tf.CandleInterval]TestData)
-	}
-	data := TestStorage[figi][interval]
-	data.Figi = figi
-	data.Interval = interval
+func initTestData(figiInterval string) *TestData {
+	data := TestStorage[figiInterval]
+	data.FigiInterval = figiInterval
 	return &data
 }
 
-func getTestData(figi string, interval tf.CandleInterval) *TestData {
-	data, ok := TestStorage[figi][interval]
+func getTestData(figiInterval string) *TestData {
+	data, ok := TestStorage[figiInterval]
 	if ok == false {
-		return initTestData(figi, interval)
+		return initTestData(figiInterval)
 	}
 	return &data
 }
 
 func (testData *TestData) restore() bool {
-	fileName := fmt.Sprintf("tests_%s_%s.dat", testData.Figi, testData.Interval)
+	fileName := fmt.Sprintf("tests_%s.dat", testData.FigiInterval)
 	if !fileExists(fileName) {
 		return false
 	}
@@ -51,11 +49,15 @@ func (testData *TestData) restore() bool {
 	return true
 }
 
-func (testData TestData) backup() {
+func (testData *TestData) backup() {
 	testData.MaxWalletOperations = testData.MaxWalletOperations[maxInt(len(testData.MaxWalletOperations)-20, 0):]
 	testData.MaxSpeedOperations = testData.MaxSpeedOperations[maxInt(len(testData.MaxSpeedOperations)-80, 0):]
 	dataOut := EncodeToBytes(testData)
-	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s_%s.dat", testData.Figi, testData.Interval), dataOut, 0644)
+	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s.dat", testData.FigiInterval), dataOut, 0644)
+}
+
+func (testData *TestData) saveToStorage() {
+	TestStorage[testData.FigiInterval] = *testData
 }
 
 func maxInt(x, y int) int {
@@ -66,27 +68,21 @@ func maxInt(x, y int) int {
 }
 
 func (candleData *CandleData) testFigi() {
-	testData := getTestData(candleData.Figi, candleData.Interval)
+	testData := getTestData(candleData.FigiInterval)
 
 	var globalMaxSpeed = 0.0
 	var globalMaxWallet = 0.0
 
 	parallel(0, 12, func(ys <-chan int) {
 		for y := range ys {
-			testOp(&globalMaxSpeed, &globalMaxWallet, y*5, candleData, testData)
+			testFigi(&globalMaxSpeed, &globalMaxWallet, y*5, candleData, testData)
 		}
 	})
-	//var wg sync.WaitGroup
-	//for op := 0; op < 60; op += 5 {
-	//	wg.Add(1)
-	//	go testOp(&wg, &globalMaxSpeed, &globalMaxWallet, op, candleData, testData)
-	//}
-	//wg.Wait()
 
 	testData.backup()
 }
 
-func testOp(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleData *CandleData, testData *TestData) {
+func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleData *CandleData, testData *TestData) {
 	var wallet, openedPrice, speed, maxWallet, maxLoss float64
 	var saveOperation int
 
@@ -170,10 +166,10 @@ func testOp(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleDat
 
 								if saveOperation > 0 {
 									operation := OperationParameter{
+										candleData.FigiInterval,
 										op, cl,
 										IndicatorParameter{indicatorType1, barType1, coef1},
 										IndicatorParameter{indicatorType2, barType2, coef2},
-										candleData.Figi, candleData.Interval,
 									}
 									if saveOperation&1 == 1 {
 										testData.MaxWalletOperations = append(testData.MaxWalletOperations, operation)
@@ -208,109 +204,6 @@ func testOp(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleDat
 			}
 		}
 	}
-}
-
-//func testOperations(data *CandleData) {
-//	var wallet, openedPrice, speed, maxWallet, maxSpeed float64
-//	show := false
-//
-//	length := len(tests.MaxWalletOperations)
-//	for x := 0; x < length; x++ {
-//		for y := 0; y < length; y++ {
-//			for z := 0; z < length; z++ {
-//				operation1 := tests.MaxWalletOperations[x]
-//				operation2 := tests.MaxWalletOperations[y]
-//				operation3 := tests.MaxWalletOperations[z]
-//
-//				wallet = StartDeposit
-//				rnOpen := 0
-//				rnSum := 0
-//				openedCnt := 0
-//				cnt := 0
-//
-//				var cl = 0
-//				for i, _ := range data.Time {
-//					if i == 0 {
-//						continue
-//					}
-//
-//					if openedCnt == 0 {
-//						if 10000*data.getIndicatorRatio(operation1, i-1) >= float64(10000+operation1.Op) {
-//							cl = operation1.Cl
-//						} else if 10000*data.getIndicatorRatio(operation2, i-1) >= float64(10000+operation2.Op) {
-//							cl = operation2.Cl
-//						} else if 10000*data.getIndicatorRatio(operation3, i-1) >= float64(10000+operation3.Op) {
-//							cl = operation3.Cl
-//						}
-//						if cl > 0 {
-//							openedPrice = data.Candles["O"][i]
-//							openedCnt = int(wallet / (Commission + openedPrice))
-//							wallet -= (Commission + openedPrice) * float64(openedCnt)
-//							rnOpen = i
-//						}
-//					} else {
-//						o := data.Candles["O"][i]
-//						if 10000*o/openedPrice >= float64(10000+cl) {
-//							wallet += o * float64(openedCnt)
-//
-//							cl = 0
-//							openedCnt = 0
-//							cnt++
-//							rnSum += i - rnOpen
-//						}
-//					}
-//
-//				}
-//
-//				if openedCnt >= 1 {
-//					wallet += (openedPrice + Commission) * float64(openedCnt)
-//				}
-//
-//				speed = (wallet - StartDeposit) / float64(rnSum)
-//
-//				if speed > maxSpeed {
-//					show = true
-//					maxSpeed = speed
-//				}
-//
-//				if wallet > maxWallet {
-//					maxWallet = wallet
-//					show = true
-//				}
-//
-//				if show {
-//					//fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
-//					fmt.Printf("\n %s %s %s %s %s %s %s",
-//						color.New(color.FgHiGreen).Sprintf("%7d", int(wallet-StartDeposit)),
-//						color.New(color.BgBlue).Sprintf("%4d", cnt),
-//						color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
-//						color.New(color.FgHiRed).Sprintf("%7.2f", speed),
-//						showOperation(operation1),
-//						showOperation(operation2),
-//						showOperation(operation3),
-//						//
-//						//color.New(color.FgHiBlue).Sprintf("%5s", indicatorType2),
-//						//color.New(color.FgWhite).Sprint(barType2),
-//						//color.New(color.FgHiWhite).Sprintf("%2d", coef2),
-//					)
-//				}
-//
-//				show = false
-//			}
-//		}
-//	}
-//}
-
-func showOperation(operation OperationParameter) string {
-	return fmt.Sprintf("{%s %s}", showIndicator(operation.Ind1), showIndicator(operation.Ind2))
-}
-
-func showIndicator(indicator IndicatorParameter) string {
-	return fmt.Sprintf("[%s %s %s]",
-		color.New(color.FgHiBlue).Sprintf("%5s", indicator.IndicatorType),
-		color.New(color.FgWhite).Sprint(indicator.BarType),
-		color.New(color.FgHiWhite).Sprintf("%2d", indicator.Coef),
-	)
 }
 
 func (candleData *CandleData) getIndicatorValue(indicator IndicatorParameter) []float64 {
