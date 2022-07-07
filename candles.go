@@ -12,14 +12,14 @@ import (
 	//_ "github.com/lib/pq"
 )
 
-type IndicatorType string
+type IndicatorType int8
 
 const (
-	IndicatorTypeSma      IndicatorType = "sma"
-	IndicatorTypeEma      IndicatorType = "ema"
-	IndicatorTypeDema     IndicatorType = "dema"
-	IndicatorTypeTema     IndicatorType = "tema"
-	IndicatorTypeTemaZero IndicatorType = "temaZ" // zero
+	IndicatorTypeSma      IndicatorType = 1
+	IndicatorTypeEma      IndicatorType = 2
+	IndicatorTypeDema     IndicatorType = 3
+	IndicatorTypeTema     IndicatorType = 4
+	IndicatorTypeTemaZero IndicatorType = 5 // zero
 )
 
 var IndicatorTypes = []IndicatorType{
@@ -28,12 +28,12 @@ var IndicatorTypes = []IndicatorType{
 }
 
 const (
-	IndicatorType2Ema     IndicatorType = "2ema"
-	IndicatorType3Ema     IndicatorType = "3ema"
-	IndicatorTypeEmaTema  IndicatorType = "ema_tema"
-	IndicatorType2EmaTema IndicatorType = "2ema_tema"
-	IndicatorType3EmaTema IndicatorType = "3ema_tema"
-	IndicatorType2Tema    IndicatorType = "2tema"
+	IndicatorType2Ema     IndicatorType = 6
+	IndicatorType3Ema     IndicatorType = 7
+	IndicatorTypeEmaTema  IndicatorType = 8
+	IndicatorType2EmaTema IndicatorType = 9
+	IndicatorType3EmaTema IndicatorType = 10
+	IndicatorType2Tema    IndicatorType = 11
 )
 
 var AdditionalIndicatorTypes = []IndicatorType{

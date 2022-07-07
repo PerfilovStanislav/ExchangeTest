@@ -13,8 +13,10 @@ import (
 
 type OperationParameter struct {
 	FigiInterval string
-	Op, Cl       int
-	Ind1, Ind2   IndicatorParameter
+	Op           int
+	Ind1         IndicatorParameter
+	Cl           int
+	Ind2         IndicatorParameter
 	//Figi       string
 	//Interval   tf.CandleInterval
 }
@@ -149,7 +151,7 @@ func showOperations(operations []OperationParameter) string {
 
 func showIndicator(indicator IndicatorParameter) string {
 	return fmt.Sprintf("[%s %s %s]",
-		color.New(color.FgHiBlue).Sprintf("%5s", indicator.IndicatorType),
+		color.New(color.FgHiBlue).Sprintf("%2d", indicator.IndicatorType),
 		color.New(color.FgWhite).Sprint(indicator.BarType),
 		color.New(color.FgHiWhite).Sprintf("%2d", indicator.Coef),
 	)

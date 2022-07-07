@@ -66,6 +66,7 @@ func main() {
 			testData := getTestData(param)
 			if !testData.restore() {
 				candleData.testFigi()
+				testData.restore()
 			}
 			testData.saveToStorage()
 			operationsForTest = append(operationsForTest, testData)

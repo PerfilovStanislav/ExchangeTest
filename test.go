@@ -50,8 +50,8 @@ func (testData *TestData) restore() bool {
 }
 
 func (testData *TestData) backup() {
-	testData.MaxWalletOperations = testData.MaxWalletOperations[maxInt(len(testData.MaxWalletOperations)-20, 0):]
-	testData.MaxSpeedOperations = testData.MaxSpeedOperations[maxInt(len(testData.MaxSpeedOperations)-80, 0):]
+	testData.MaxWalletOperations = testData.MaxWalletOperations[maxInt(len(testData.MaxWalletOperations)-35, 0):]
+	testData.MaxSpeedOperations = testData.MaxSpeedOperations[maxInt(len(testData.MaxSpeedOperations)-115, 0):]
 	dataOut := EncodeToBytes(testData)
 	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s.dat", testData.FigiInterval), dataOut, 0644)
 }
@@ -167,8 +167,9 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleD
 								if saveOperation > 0 {
 									operation := OperationParameter{
 										candleData.FigiInterval,
-										op, cl,
+										op,
 										IndicatorParameter{indicatorType1, barType1, coef1},
+										cl,
 										IndicatorParameter{indicatorType2, barType2, coef2},
 									}
 									if saveOperation&1 == 1 {
@@ -186,11 +187,11 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleD
 										color.New(color.BgHiGreen).Sprintf("%3d", op),
 										color.New(color.BgHiRed).Sprintf("%3d", cl),
 
-										color.New(color.FgHiBlue).Sprintf("%5s", indicatorType1),
+										color.New(color.FgHiBlue).Sprintf("%2d", indicatorType1),
 										color.New(color.FgWhite).Sprint(barType1),
 										color.New(color.FgHiWhite).Sprintf("%2d", coef1),
 
-										color.New(color.FgHiBlue).Sprintf("%5s", indicatorType2),
+										color.New(color.FgHiBlue).Sprintf("%2d", indicatorType2),
 										color.New(color.FgWhite).Sprint(barType2),
 										color.New(color.FgHiWhite).Sprintf("%2d", coef2),
 										color.New(color.FgHiRed).Sprintf("%4.2f%%", (maxLoss)*100.0),
