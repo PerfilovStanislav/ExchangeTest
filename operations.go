@@ -72,7 +72,7 @@ func testOperations(operationParameters []OperationParameter, maxWallet *float64
 	cnt := 0
 	cl := 0
 	show := false
-	var openedPrice, speed float64
+	var openedPrice float64
 
 	var candleData *CandleData
 
@@ -125,11 +125,10 @@ func testOperations(operationParameters []OperationParameter, maxWallet *float64
 	}
 
 	if show {
-		fmt.Printf("\n %s %s %s %s %s",
-			color.New(color.FgHiGreen).Sprintf("%7d", int(wallet-StartDeposit)),
-			color.New(color.BgBlue).Sprintf("%4d", cnt),
+		fmt.Printf("\n %s %s %s %s",
+			color.New(color.FgHiGreen).Sprintf("%8d", int(wallet-StartDeposit)),
+			color.New(color.BgBlue).Sprintf("cnt:%4d", cnt),
 			color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
-			color.New(color.FgHiRed).Sprintf("%7.2f", speed),
 			showOperations(operationParameters),
 		)
 	}
@@ -138,7 +137,13 @@ func testOperations(operationParameters []OperationParameter, maxWallet *float64
 }
 
 func showOperation(operation OperationParameter) string {
-	return fmt.Sprintf("{%s %s}", showIndicator(operation.Ind1), showIndicator(operation.Ind2))
+	return fmt.Sprintf("{%s %d %d|%s|%s}",
+		color.New(color.FgHiRed).Sprintf("%s", operation.FigiInterval[0:12]),
+		operation.Op,
+		operation.Cl,
+		showIndicator(operation.Ind1),
+		showIndicator(operation.Ind2),
+	)
 }
 
 func showOperations(operations []OperationParameter) string {
@@ -150,10 +155,10 @@ func showOperations(operations []OperationParameter) string {
 }
 
 func showIndicator(indicator IndicatorParameter) string {
-	return fmt.Sprintf("[%s %s %s]",
-		color.New(color.FgHiBlue).Sprintf("%2d", indicator.IndicatorType),
+	return fmt.Sprintf("%s %s %s",
+		color.New(color.FgHiBlue).Sprintf("%d", indicator.IndicatorType),
 		color.New(color.FgWhite).Sprint(indicator.BarType),
-		color.New(color.FgHiWhite).Sprintf("%2d", indicator.Coef),
+		color.New(color.FgHiWhite).Sprintf("%d", indicator.Coef),
 	)
 }
 

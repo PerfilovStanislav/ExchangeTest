@@ -49,7 +49,7 @@ func main() {
 
 	if envTestFigiInterval != "" {
 		//figi, interval := getFigiAndInterval(envTestFigiInterval)
-		candleData := getCandleData(envTestFigiInterval)
+		candleData := getCandleData(envTestFigiInterval + "_hour")
 		tinkoff.downloadCandlesByFigi(candleData)
 		candleData.testFigi()
 	}
@@ -58,12 +58,12 @@ func main() {
 	if envTestOperations != "" {
 		envTestOperationParams := strings.Split(envTestOperations, ";")
 		for _, param := range envTestOperationParams {
-			candleData := getCandleData(param)
+			candleData := getCandleData(param + "_hour")
 			if !candleData.restore() {
 				tinkoff.downloadCandlesByFigi(candleData)
 			}
 
-			testData := getTestData(param)
+			testData := getTestData(param + "_hour")
 			if !testData.restore() {
 				candleData.testFigi()
 				testData.restore()
