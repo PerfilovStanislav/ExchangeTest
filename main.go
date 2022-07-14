@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/gob"
-	"flag"
 	"fmt"
 	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	_ "github.com/jackc/pgx"
@@ -16,15 +15,17 @@ import (
 	"os"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
 const StartDeposit = float64(100000.0)
-const Commission = float64(0.06)
 
-var tinkoff Tinkoff
+var Commission float64
+
+var apiHandler ApiInterface
 
 func main() {
 	_ = godotenv.Load()
@@ -40,17 +41,19 @@ func main() {
 	//}()
 
 	//restore := flag.Bool("restore", os.Getenv("restore") == "true", "Restore")
-	envTestFigiInterval := *flag.String("testFigiInterval", os.Getenv("testFigiInterval"), "testFigiInterval")
-	envTestOperations := *flag.String("testOperations", os.Getenv("testOperations"), "testOperations")
-	flag.Parse()
+	envTestFigiInterval := os.Getenv("testFigiInterval")
+	envTestOperations := os.Getenv("testOperations")
+
+	Commission, _ = strconv.ParseFloat(os.Getenv("comission"), 64)
 
 	CandleStorage = make(map[string]CandleData)
 	TestStorage = make(map[string]TestData)
 
 	if envTestFigiInterval != "" {
 		//figi, interval := getFigiAndInterval(envTestFigiInterval)
-		candleData := getCandleData(envTestFigiInterval + "_hour")
-		tinkoff.downloadCandlesByFigi(candleData)
+		candleData := getCandleData(envTestFigiInterval + ".hour")
+		apiHandler = getApiHandler(envTestFigiInterval)
+		apiHandler.downloadCandlesByFigi(candleData)
 		candleData.testFigi()
 	}
 
@@ -58,12 +61,12 @@ func main() {
 	if envTestOperations != "" {
 		envTestOperationParams := strings.Split(envTestOperations, ";")
 		for _, param := range envTestOperationParams {
-			candleData := getCandleData(param + "_hour")
+			candleData := getCandleData(param + ".hour")
 			if !candleData.restore() {
 				tinkoff.downloadCandlesByFigi(candleData)
 			}
 
-			testData := getTestData(param + "_hour")
+			testData := getTestData(param + ".hour")
 			if !testData.restore() {
 				candleData.testFigi()
 				testData.restore()
@@ -89,6 +92,15 @@ func main() {
 	//
 	//select {}
 
+}
+
+func getApiHandler(figi string) ApiInterface {
+	switch len(figi) {
+	case 12:
+		return &tinkoff
+	default:
+		return &exmo
+	}
 }
 
 func fillOperationTestTimes(operationsForTest []*TestData) {
@@ -139,7 +151,7 @@ func fillOperationTestTimes(operationsForTest []*TestData) {
 }
 
 func getFigiAndInterval(str string) (string, tf.CandleInterval) {
-	param := strings.Split(str, "_")
+	param := strings.Split(str, ".")
 	return param[0], tf.CandleInterval(param[1])
 }
 

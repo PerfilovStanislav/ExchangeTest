@@ -4,13 +4,20 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
 	"io/ioutil"
 	"time"
 	//_ "github.com/lib/pq"
 )
+
+type Candle struct {
+	O float64
+	C float64
+	H float64
+	L float64
+	T time.Time
+}
 
 type IndicatorType int8
 
@@ -118,21 +125,21 @@ func (candleData *CandleData) lastTime() time.Time {
 	return candleData.Time[candleData.index()]
 }
 
-func (candleData *CandleData) upsertCandle(c tf.Candle) bool {
+func (candleData *CandleData) upsertCandle(c Candle) bool {
 	l := candleData.index()
-	if l >= 0 && candleData.Time[l].Equal(c.TS) {
-		candleData.Time[l] = c.TS
-		candleData.Candles["O"][l] = c.OpenPrice
-		candleData.Candles["C"][l] = c.ClosePrice
-		candleData.Candles["H"][l] = c.HighPrice
-		candleData.Candles["L"][l] = c.LowPrice
+	if l >= 0 && candleData.Time[l].Equal(c.T) {
+		candleData.Time[l] = c.T
+		candleData.Candles["O"][l] = c.O
+		candleData.Candles["C"][l] = c.C
+		candleData.Candles["H"][l] = c.H
+		candleData.Candles["L"][l] = c.L
 		return false
 	} else {
-		candleData.Time = append(candleData.Time, c.TS)
-		candleData.Candles["O"] = append(candleData.Candles["O"], c.OpenPrice)
-		candleData.Candles["C"] = append(candleData.Candles["C"], c.ClosePrice)
-		candleData.Candles["H"] = append(candleData.Candles["H"], c.HighPrice)
-		candleData.Candles["L"] = append(candleData.Candles["L"], c.LowPrice)
+		candleData.Time = append(candleData.Time, c.T)
+		candleData.Candles["O"] = append(candleData.Candles["O"], c.O)
+		candleData.Candles["C"] = append(candleData.Candles["C"], c.C)
+		candleData.Candles["H"] = append(candleData.Candles["H"], c.H)
+		candleData.Candles["L"] = append(candleData.Candles["L"], c.L)
 		return true
 	}
 }
