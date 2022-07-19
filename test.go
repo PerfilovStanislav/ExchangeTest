@@ -115,8 +115,8 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleD
 									if openedCnt == 0 {
 										if bars1[barType1][i-1]*10000/bars2[barType2][i-1] >= float64(10000+op) {
 											openedPrice = candleData.Candles["O"][i]
-											openedCnt = int(wallet / (Commission + openedPrice))
-											wallet -= (Commission + openedPrice) * float64(openedCnt)
+											openedCnt = int(wallet / (openedPrice * (1 + Commission)))
+											wallet -= (openedPrice * (1 + Commission)) * float64(openedCnt)
 											rnOpen = i
 										}
 									} else {
@@ -146,7 +146,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleD
 								}
 
 								if openedCnt >= 1 {
-									wallet += (openedPrice + Commission) * float64(openedCnt)
+									wallet += (openedPrice * (1 + Commission)) * float64(openedCnt)
 								}
 
 								if wallet > *globalMaxWallet {

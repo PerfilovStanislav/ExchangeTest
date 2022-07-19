@@ -15,7 +15,6 @@ import (
 	"os"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,7 +22,7 @@ import (
 
 const StartDeposit = float64(100000.0)
 
-var Commission float64
+const Commission = float64(0.005)
 
 var apiHandler ApiInterface
 
@@ -40,11 +39,15 @@ func main() {
 	//	}
 	//}()
 
+	x := 12345.67891011213
+	a := fmt.Sprintf("%v", x)
+	b := fmt.Sprintf("%f", x)
+
+	fmt.Println(a, b)
+
 	//restore := flag.Bool("restore", os.Getenv("restore") == "true", "Restore")
 	envTestFigiInterval := os.Getenv("testFigiInterval")
 	envTestOperations := os.Getenv("testOperations")
-
-	Commission, _ = strconv.ParseFloat(os.Getenv("comission"), 64)
 
 	CandleStorage = make(map[string]CandleData)
 	TestStorage = make(map[string]TestData)
@@ -62,8 +65,9 @@ func main() {
 		envTestOperationParams := strings.Split(envTestOperations, ";")
 		for _, param := range envTestOperationParams {
 			candleData := getCandleData(param + ".hour")
+			apiHandler = getApiHandler(envTestFigiInterval)
 			if !candleData.restore() {
-				tinkoff.downloadCandlesByFigi(candleData)
+				apiHandler.downloadCandlesByFigi(candleData)
 			}
 
 			testData := getTestData(param + ".hour")
