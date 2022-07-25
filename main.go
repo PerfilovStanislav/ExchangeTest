@@ -22,7 +22,7 @@ import (
 
 const StartDeposit = float64(100000.0)
 
-const Commission = float64(0.005)
+const Commission = float64(0.99)
 
 var apiHandler ApiInterface
 

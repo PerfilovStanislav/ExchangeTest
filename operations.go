@@ -91,8 +91,8 @@ func testOperations(operationParameters []OperationParameter, maxWallet *float64
 						cl = parameter.Cl
 
 						openedPrice = candleData.Candles["O"][index]
-						openedCnt = int(wallet / (openedPrice * (1 + Commission)))
-						wallet -= (openedPrice * (1 + Commission)) * float64(openedCnt)
+						openedCnt = int(wallet / openedPrice)
+						wallet -= openedPrice * float64(openedCnt)
 						rnOpen = index
 						break
 					}
@@ -116,7 +116,7 @@ func testOperations(operationParameters []OperationParameter, maxWallet *float64
 	}
 
 	if openedCnt >= 1 {
-		wallet += (openedPrice * (1 + Commission)) * float64(openedCnt)
+		wallet += openedPrice * float64(openedCnt) * Commission
 	}
 
 	if wallet > *maxWallet {
