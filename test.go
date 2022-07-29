@@ -73,21 +73,21 @@ func (candleData *CandleData) testFigi() {
 	var globalMaxSpeed = 0.0
 	var globalMaxWallet = 0.0
 
-	parallel(0, 12, func(ys <-chan int) {
+	parallel(0, 30, func(ys <-chan int) {
 		for y := range ys {
-			testFigi(&globalMaxSpeed, &globalMaxWallet, y*5, candleData, testData)
+			testFigi(&globalMaxSpeed, &globalMaxWallet, y*25, candleData, testData)
 		}
 	})
 
 	testData.backup()
 }
 
-func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleData *CandleData, testData *TestData) {
+func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleData *CandleData, testData *TestData) {
 	var wallet, openedPrice, speed, maxWallet, maxLoss float64
 	var saveOperation int
 
 	for _, barType1 := range BarTypes {
-		for cl := 0; cl < 750; cl += 25 {
+		for op := 0; op < 60; op += 5 {
 			//for clLoss := 0; clLoss < 750; clLoss += 25 {
 			for _, barType2 := range BarTypes {
 				for _, indicatorType1 := range IndicatorTypes {
