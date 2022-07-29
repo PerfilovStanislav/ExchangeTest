@@ -22,7 +22,7 @@ import (
 
 const StartDeposit = float64(100000.0)
 
-const Commission = float64(0.99)
+const Commission = float64(0.98)
 
 var apiHandler ApiInterface
 
@@ -38,12 +38,6 @@ func main() {
 	//		os.Exit(1)
 	//	}
 	//}()
-
-	x := 12345.67891011213
-	a := fmt.Sprintf("%v", x)
-	b := fmt.Sprintf("%f", x)
-
-	fmt.Println(a, b)
 
 	//restore := flag.Bool("restore", os.Getenv("restore") == "true", "Restore")
 	envTestFigiInterval := os.Getenv("testFigiInterval")

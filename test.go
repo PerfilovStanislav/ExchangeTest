@@ -88,6 +88,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleD
 
 	for _, barType1 := range BarTypes {
 		for cl := 0; cl < 750; cl += 25 {
+			//for clLoss := 0; clLoss < 750; clLoss += 25 {
 			for _, barType2 := range BarTypes {
 				for _, indicatorType1 := range IndicatorTypes {
 					indicators1 := candleData.Indicators[indicatorType1]
@@ -121,25 +122,28 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleD
 										}
 									} else {
 										o := candleData.Candles["O"][i]
-										if o*10000/openedPrice >= float64(10000+cl) {
+										//l := candleData.Candles["L"][i]
+										if o*10000/openedPrice >= float64(10000+cl) /*|| l*10000/openedPrice <= float64(10000+clLoss)*/ {
 											wallet += o * float64(openedCnt) * Commission
 
 											if wallet > maxWallet {
 												maxWallet = wallet
 											}
 
-											l := candleData.Candles["L"][i]
-											loss := 1 - l*float64(openedCnt)/maxWallet
-											if loss > maxLoss {
-												maxLoss = loss
-												if maxLoss >= 0.05 {
-													continue out
-												}
-											}
-
 											openedCnt = 0
 											cnt++
 											rnSum += i - rnOpen
+										}
+									}
+
+									if openedCnt != 0 {
+										l := candleData.Candles["L"][i]
+										loss := 1 - l*float64(openedCnt)/maxWallet
+										if loss > maxLoss {
+											maxLoss = loss
+											if maxLoss >= 0.25 {
+												continue out
+											}
 										}
 									}
 
@@ -157,7 +161,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleD
 								speed = (wallet - StartDeposit) / float64(rnSum)
 								if cnt >= 25 && rnSum > 1 {
 									if speed > (*globalMaxSpeed)*0.995 /* 1000.0*/ {
-										saveOperation += 1
+										saveOperation += 2
 										if speed > *globalMaxSpeed {
 											*globalMaxSpeed = speed
 										}
@@ -181,11 +185,13 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleD
 
 									fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
 										color.New(color.FgHiGreen).Sprintf("%7d", int(wallet-StartDeposit)),
+										//color.New(color.FgHiGreen).Sprintf("%7d", int(100*(wallet-StartDeposit)/StartDeposit)),
 										color.New(color.BgBlue).Sprintf("%4d", cnt),
 										color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
-										color.New(color.FgHiRed).Sprintf("%7.2f", speed),
+										color.New(color.FgHiRed).Sprintf("%8.2f", speed),
 										color.New(color.BgHiGreen).Sprintf("%3d", op),
 										color.New(color.BgHiRed).Sprintf("%3d", cl),
+										//color.New(color.BgHiRed).Sprintf("%3d", clLoss),
 
 										color.New(color.FgHiBlue).Sprintf("%2d", indicatorType1),
 										color.New(color.FgWhite).Sprint(barType1),
@@ -203,6 +209,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, op int, candleD
 					}
 				}
 			}
+			//}
 		}
 	}
 }

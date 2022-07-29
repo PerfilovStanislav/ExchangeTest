@@ -28,7 +28,7 @@ func (exmo *Exmo) downloadCandlesByFigi(candleData *CandleData) {
 	candleData.Candles = make(map[BarType][]float64)
 
 	endDate := time.Now().Unix()
-	startDate := time.Now().AddDate(-2, 0, 0).Unix()
+	startDate := time.Now().AddDate(-1, 0, 0).Unix()
 
 	for startDate < endDate {
 		from := startDate
