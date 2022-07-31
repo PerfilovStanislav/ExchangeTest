@@ -13,14 +13,21 @@ import (
 )
 
 type Candle struct {
-	L  float64
-	O  float64
-	C  float64
-	H  float64
-	CH float64
-	LO float64
-	LH float64
-	T  time.Time
+	L   float64
+	O   float64
+	C   float64
+	H   float64
+	LO  float64
+	LC  float64
+	LH  float64
+	OC  float64
+	OH  float64
+	CH  float64
+	LOC float64
+	LOH float64
+	LCH float64
+	OCH float64
+	T   time.Time
 }
 
 type IndicatorType int8
@@ -59,13 +66,24 @@ const (
 	Open  BarType = "O"
 	Close BarType = "C"
 	High  BarType = "H"
-	CH    BarType = "CH"
 	LO    BarType = "LO"
+	LC    BarType = "LC"
 	LH    BarType = "LH"
+	OC    BarType = "OC"
+	OH    BarType = "OH"
+	CH    BarType = "CH"
+	LOC   BarType = "LOC"
+	LOH   BarType = "LOH"
+	LCH   BarType = "LCH"
+	OCH   BarType = "OCH"
 )
 
-var BarTypes = [7]BarType{
-	CH, LO, LH, Open, Close, High, Low,
+var BarTypes = [14]BarType{
+	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, Open, Close, High, Low,
+}
+
+var TestBarTypes = [10]BarType{
+	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, //Open, Close, High, Low,
 }
 
 type CandleData struct {
@@ -280,7 +298,7 @@ func (candleData *CandleData) fillIndicators() {
 			candleData.Indicators[indicatorType][n] = make(map[BarType][]float64)
 		}
 
-		for _, barType := range BarTypes {
+		for _, barType := range TestBarTypes {
 			candleData.getSma(n, l, barType)
 			candleData.getEma(n, l, barType)
 			candleData.getDema(n, l, barType)

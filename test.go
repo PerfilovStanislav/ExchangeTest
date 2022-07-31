@@ -89,9 +89,9 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 	var wallet, openedPrice, speed, maxWallet, maxLoss float64
 	var saveOperation int
 
-	for _, barType1 := range BarTypes {
+	for _, barType1 := range TestBarTypes {
 		for op := 0; op < 60; op += 5 {
-			for _, barType2 := range BarTypes {
+			for _, barType2 := range TestBarTypes {
 				for _, indicatorType1 := range IndicatorTypes {
 					indicators1 := candleData.Indicators[indicatorType1]
 					for coef1, bars1 := range indicators1 {
@@ -115,7 +115,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 										continue
 									}
 
-									o := candleData.Candles["O"][i]
+									o := candleData.Candles[Open][i]
 									if openedCnt == 0 {
 										if bars1[barType1][i-1]*10000/bars2[barType2][i-1] >= float64(10000+op) {
 											openedPrice = o
@@ -138,7 +138,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 									}
 
 									if openedCnt != 0 {
-										l := candleData.Candles["L"][i]
+										l := candleData.Candles[Low][i]
 										loss := 1 - l*openedCnt/maxWallet
 										if loss > maxLoss {
 											maxLoss = loss

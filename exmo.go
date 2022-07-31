@@ -80,9 +80,16 @@ func (exmo *Exmo) downloadCandlesByFigi(candleData *CandleData) {
 				c.C,
 				c.H,
 				c.L,
-				(c.C + c.H) * 0.5,
 				(c.L + c.O) * 0.5,
+				(c.L + c.C) * 0.5,
 				(c.L + c.H) * 0.5,
+				(c.O + c.C) * 0.5,
+				(c.O + c.H) * 0.5,
+				(c.C + c.H) * 0.5,
+				(c.L + c.O + c.C) / 3.0,
+				(c.L + c.O + c.H) / 3.0,
+				(c.L + c.C + c.H) / 3.0,
+				(c.O + c.C + c.H) / 3.0,
 				time.Unix(c.T, 0),
 			})
 		}
