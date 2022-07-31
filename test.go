@@ -8,6 +8,7 @@ import (
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
 	"io/ioutil"
+	"time"
 	//_ "github.com/lib/pq"
 )
 
@@ -73,11 +74,13 @@ func (candleData *CandleData) testFigi() {
 	var globalMaxSpeed = 0.0
 	var globalMaxWallet = 0.0
 
+	currentTime := time.Now().Unix()
 	parallel(0, 30, func(ys <-chan int) {
 		for y := range ys {
 			testFigi(&globalMaxSpeed, &globalMaxWallet, y*25, candleData, testData)
 		}
 	})
+	fmt.Println(time.Now().Unix() - currentTime)
 
 	testData.backup()
 }
@@ -88,7 +91,6 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 
 	for _, barType1 := range BarTypes {
 		for op := 0; op < 60; op += 5 {
-			//for clLoss := 0; clLoss < 750; clLoss += 25 {
 			for _, barType2 := range BarTypes {
 				for _, indicatorType1 := range IndicatorTypes {
 					indicators1 := candleData.Indicators[indicatorType1]
@@ -105,7 +107,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 								maxLoss = 0
 								rnOpen := 0
 								rnSum := 0
-								openedCnt := 0
+								openedCnt := 0.0
 								cnt := 0
 
 								for i, _ := range candleData.Time {
@@ -113,24 +115,23 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 										continue
 									}
 
+									o := candleData.Candles["O"][i]
 									if openedCnt == 0 {
 										if bars1[barType1][i-1]*10000/bars2[barType2][i-1] >= float64(10000+op) {
-											openedPrice = candleData.Candles["O"][i]
-											openedCnt = int(wallet / openedPrice)
-											wallet -= openedPrice * float64(openedCnt)
+											openedPrice = o
+											openedCnt = wallet / openedPrice
+											wallet -= openedPrice * openedCnt
 											rnOpen = i
 										}
 									} else {
-										o := candleData.Candles["O"][i]
-										//l := candleData.Candles["L"][i]
-										if o*10000/openedPrice >= float64(10000+cl) /*|| l*10000/openedPrice <= float64(10000+clLoss)*/ {
-											wallet += o * float64(openedCnt) * Commission
+										if 10000*o/openedPrice >= float64(10000+cl) {
+											wallet += o * openedCnt * Commission
 
 											if wallet > maxWallet {
 												maxWallet = wallet
 											}
 
-											openedCnt = 0
+											openedCnt = 0.0
 											cnt++
 											rnSum += i - rnOpen
 										}
@@ -138,7 +139,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 
 									if openedCnt != 0 {
 										l := candleData.Candles["L"][i]
-										loss := 1 - l*float64(openedCnt)/maxWallet
+										loss := 1 - l*openedCnt/maxWallet
 										if loss > maxLoss {
 											maxLoss = loss
 											if maxLoss >= 0.25 {
@@ -150,7 +151,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 								}
 
 								if openedCnt >= 1 {
-									wallet += openedPrice * float64(openedCnt)
+									wallet += openedPrice * openedCnt
 								}
 
 								if wallet > *globalMaxWallet {
@@ -209,7 +210,6 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 					}
 				}
 			}
-			//}
 		}
 	}
 }

@@ -71,12 +71,23 @@ func (exmo *Exmo) downloadCandlesByFigi(candleData *CandleData) {
 		}
 		for _, c := range candleHistory.Candles {
 			candleData.upsertCandle(Candle{
-				c.O, c.C, c.H, c.L, time.Unix(c.T, 0),
+				c.O,
+				c.C,
+				c.H,
+				c.L,
+				(c.C + c.H) * 0.5,
+				(c.L + c.O) * 0.5,
+				(c.L + c.H) * 0.5,
+				time.Unix(c.T, 0),
 			})
 		}
-		fmt.Printf("Кол-во свечей: %d\n", candleData.len())
-
+		fmt.Printf("%s - %s +%d\n",
+			time.Unix(from, 0).Format("02.01.06 15"),
+			time.Unix(to, 0).Format("02.01.06 15"),
+			len(candleHistory.Candles),
+		)
 	}
+	fmt.Printf("Кол-во свечей: %d\n", candleData.len())
 
 	candleData.fillIndicators()
 	candleData.save()

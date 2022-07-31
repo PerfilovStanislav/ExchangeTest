@@ -94,8 +94,8 @@ func main() {
 
 func getApiHandler(figi string) ApiInterface {
 	switch len(figi) {
-	case 12:
-		return &tinkoff
+	//case 12:
+	//	return &tinkoff
 	default:
 		return &exmo
 	}
