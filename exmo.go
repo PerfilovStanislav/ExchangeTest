@@ -45,6 +45,11 @@ func (exmo *Exmo) downloadCandlesByFigi(candleData *CandleData) {
 
 		bts, err := exmo.apiQuery("candles_history", params)
 
+		if err != nil {
+			fmt.Sprintln(err)
+			log.Fatalln(err)
+		}
+
 		type CandleHistory struct {
 			S       string `json:"s"`
 			Candles []struct {
@@ -86,6 +91,7 @@ func (exmo *Exmo) downloadCandlesByFigi(candleData *CandleData) {
 			time.Unix(to, 0).Format("02.01.06 15"),
 			len(candleHistory.Candles),
 		)
+		time.Sleep(time.Millisecond * time.Duration(100))
 	}
 	fmt.Printf("Кол-во свечей: %d\n", candleData.len())
 
