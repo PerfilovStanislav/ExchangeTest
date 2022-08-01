@@ -185,7 +185,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 									}
 
 									fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
-										color.New(color.FgHiGreen).Sprintf("%7d", int(wallet-StartDeposit)),
+										color.New(color.FgHiGreen).Sprintf("%5d", int(100*(wallet-StartDeposit)/StartDeposit)),
 										//color.New(color.FgHiGreen).Sprintf("%7d", int(100*(wallet-StartDeposit)/StartDeposit)),
 										color.New(color.BgBlue).Sprintf("%4d", cnt),
 										color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
