@@ -90,7 +90,7 @@ func (exmo *Exmo) downloadCandlesByFigi(candleData *CandleData) {
 				(c.L + c.O + c.H) / 3.0,
 				(c.L + c.C + c.H) / 3.0,
 				(c.O + c.C + c.H) / 3.0,
-				time.Unix(c.T, 0),
+				time.Unix(c.T/1000, 0),
 			})
 		}
 		fmt.Printf("%s - %s +%d\n",
@@ -98,7 +98,7 @@ func (exmo *Exmo) downloadCandlesByFigi(candleData *CandleData) {
 			time.Unix(to, 0).Format("02.01.06 15"),
 			len(candleHistory.Candles),
 		)
-		time.Sleep(time.Millisecond * time.Duration(100))
+		time.Sleep(time.Millisecond * time.Duration(50))
 	}
 	fmt.Printf("Кол-во свечей: %d\n", candleData.len())
 

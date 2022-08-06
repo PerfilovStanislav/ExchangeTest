@@ -28,15 +28,9 @@ var operationsTestMatrix [][]*TestData
 
 var operationTestTimes = struct {
 	totalTimes []time.Time
-	//exist      map[*CandleData]map[time.Time]bool
-	//indexes    map[*CandleData]map[time.Time]int
-	exist   map[string]map[time.Time]bool
-	indexes map[string]map[time.Time]int
+	exist      map[string]map[time.Time]bool
+	indexes    map[string]map[time.Time]int
 }{}
-
-type TestOperationStorage struct {
-	Wallet, openedPrice, speed, maxWallet, maxSpeed float64
-}
 
 func testMatrixOperations(operationsTestMatrix [][]*TestData) {
 	var maxWallet float64
@@ -87,7 +81,7 @@ func testOperations(operationParameters []OperationParameter, maxWallet *float64
 					if x >= float64(10000+parameter.Op) {
 						cl = parameter.Cl
 
-						openedPrice = candleData.Candles["O"][index]
+						openedPrice = candleData.Candles[O][index]
 						openedCnt = int(wallet / openedPrice)
 						wallet -= openedPrice * float64(openedCnt)
 						rnOpen = index
@@ -98,7 +92,7 @@ func testOperations(operationParameters []OperationParameter, maxWallet *float64
 		} else {
 			index := operationTestTimes.indexes[candleData.FigiInterval][t]
 			if index > 0 {
-				o := candleData.Candles["O"][index]
+				o := candleData.Candles[O][index]
 				if 10000*o/openedPrice >= float64(10000+cl) {
 					wallet += o * float64(openedCnt)
 

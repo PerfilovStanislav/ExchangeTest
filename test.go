@@ -51,8 +51,8 @@ func (testData *TestData) restore() bool {
 }
 
 func (testData *TestData) backup() {
-	testData.MaxWalletOperations = testData.MaxWalletOperations[maxInt(len(testData.MaxWalletOperations)-35, 0):]
-	testData.MaxSpeedOperations = testData.MaxSpeedOperations[maxInt(len(testData.MaxSpeedOperations)-115, 0):]
+	testData.MaxWalletOperations = testData.MaxWalletOperations[maxInt(len(testData.MaxWalletOperations)-60, 0):]
+	testData.MaxSpeedOperations = testData.MaxSpeedOperations[maxInt(len(testData.MaxSpeedOperations)-200, 0):]
 	dataOut := EncodeToBytes(testData)
 	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s.dat", testData.FigiInterval), dataOut, 0644)
 }
@@ -75,7 +75,7 @@ func (candleData *CandleData) testFigi() {
 	var globalMaxWallet = 0.0
 
 	currentTime := time.Now().Unix()
-	parallel(0, 30, func(ys <-chan int) {
+	parallel(0, 50, func(ys <-chan int) {
 		for y := range ys {
 			testFigi(&globalMaxSpeed, &globalMaxWallet, y*25, candleData, testData)
 		}
@@ -115,7 +115,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 										continue
 									}
 
-									o := candleData.Candles[Open][i]
+									o := candleData.Candles[O][i]
 									if openedCnt == 0 {
 										if bars1[barType1][i-1]*10000/bars2[barType2][i-1] >= float64(10000+op) {
 											openedPrice = o
@@ -138,11 +138,11 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 									}
 
 									if openedCnt != 0 {
-										l := candleData.Candles[Low][i]
+										l := candleData.Candles[L][i]
 										loss := 1 - l*openedCnt/maxWallet
 										if loss > maxLoss {
 											maxLoss = loss
-											if maxLoss >= 0.25 {
+											if maxLoss >= 0.50 {
 												continue out
 											}
 										}
@@ -195,12 +195,13 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 										//color.New(color.BgHiRed).Sprintf("%3d", clLoss),
 
 										color.New(color.FgHiBlue).Sprintf("%2d", indicatorType1),
-										color.New(color.FgWhite).Sprint(barType1),
+										color.New(color.FgWhite).Sprintf("%3s", barType1),
 										color.New(color.FgHiWhite).Sprintf("%2d", coef1),
 
 										color.New(color.FgHiBlue).Sprintf("%2d", indicatorType2),
-										color.New(color.FgWhite).Sprint(barType2),
+										color.New(color.FgWhite).Sprintf("%3s", barType2),
 										color.New(color.FgHiWhite).Sprintf("%2d", coef2),
+
 										color.New(color.FgHiRed).Sprintf("%4.2f%%", (maxLoss)*100.0),
 									)
 								}

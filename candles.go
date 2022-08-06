@@ -59,31 +59,37 @@ var AdditionalIndicatorTypes = []IndicatorType{
 	IndicatorType2Tema,
 }
 
-type BarType string
+type BarType int8
 
 const (
-	Low   BarType = "L"
-	Open  BarType = "O"
-	Close BarType = "C"
-	High  BarType = "H"
-	LO    BarType = "LO"
-	LC    BarType = "LC"
-	LH    BarType = "LH"
-	OC    BarType = "OC"
-	OH    BarType = "OH"
-	CH    BarType = "CH"
-	LOC   BarType = "LOC"
-	LOH   BarType = "LOH"
-	LCH   BarType = "LCH"
-	OCH   BarType = "OCH"
+	L = BarType(iota)
+	O
+	C
+	H
+	LO
+	LC
+	LH
+	OC
+	OH
+	CH
+	LOC
+	LOH
+	LCH
+	OCH
 )
 
+func (barType BarType) getName() string {
+	return [14]string{
+		"L", "O", "C", "H", "LO", "LC", "LH", "OC", "OH", "CH", "LOC", "LOH", "LCH", "OCH",
+	}[barType]
+}
+
 var BarTypes = [14]BarType{
-	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, Open, Close, High, Low,
+	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, O, C, H, L,
 }
 
 var TestBarTypes = [10]BarType{
-	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, //Open, Close, High, Low,
+	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, //O, C, H, L,
 }
 
 type CandleData struct {
@@ -169,7 +175,7 @@ func (candleData *CandleData) upsertCandle(c Candle) bool {
 
 func (candle Candle) getPrice(barType BarType) float64 {
 	r := reflect.ValueOf(candle)
-	f := reflect.Indirect(r).FieldByName(string(barType))
+	f := reflect.Indirect(r).FieldByName(barType.getName())
 	return f.Float()
 }
 
@@ -298,7 +304,7 @@ func (candleData *CandleData) fillIndicators() {
 			candleData.Indicators[indicatorType][n] = make(map[BarType][]float64)
 		}
 
-		for _, barType := range TestBarTypes {
+		for _, barType := range BarTypes {
 			candleData.getSma(n, l, barType)
 			candleData.getEma(n, l, barType)
 			candleData.getDema(n, l, barType)
