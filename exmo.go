@@ -23,7 +23,7 @@ type ApiParams map[string]string
 
 func (exmo *Exmo) downloadCandlesForSymbol(candleData *CandleData) {
 	endDate := time.Now().Unix()
-	startDate := time.Now().AddDate(0, -1, 0).Unix()
+	startDate := time.Now().AddDate(-1, 0, 0).Unix()
 
 	figi := candleData.getPairName()
 
