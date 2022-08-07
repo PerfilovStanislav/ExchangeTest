@@ -195,11 +195,11 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 										//color.New(color.BgHiRed).Sprintf("%3d", clLoss),
 
 										color.New(color.FgHiBlue).Sprintf("%2d", indicatorType1),
-										color.New(color.FgWhite).Sprintf("%3s", barType1),
+										color.New(color.FgWhite).Sprintf("%3s", barType1.getName()),
 										color.New(color.FgHiWhite).Sprintf("%2d", coef1),
 
 										color.New(color.FgHiBlue).Sprintf("%2d", indicatorType2),
-										color.New(color.FgWhite).Sprintf("%3s", barType2),
+										color.New(color.FgWhite).Sprintf("%3s", barType2.getName()),
 										color.New(color.FgHiWhite).Sprintf("%2d", coef2),
 
 										color.New(color.FgHiRed).Sprintf("%4.2f%%", (maxLoss)*100.0),

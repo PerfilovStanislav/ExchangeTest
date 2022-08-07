@@ -8,6 +8,7 @@ import (
 	_ "github.com/jackc/pgx/stdlib"
 	"io/ioutil"
 	"reflect"
+	"sync"
 	"time"
 	//_ "github.com/lib/pq"
 )
@@ -91,6 +92,8 @@ var BarTypes = [14]BarType{
 var TestBarTypes = [10]BarType{
 	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, //O, C, H, L,
 }
+
+var CandleDataLock sync.Mutex
 
 type CandleData struct {
 	FigiInterval string
@@ -220,28 +223,36 @@ func (candleData *CandleData) getCandle(n, i int, barType BarType) float64 {
 }
 
 func (candleData *CandleData) get(indicatorType IndicatorType, fun funGet, n, i int, barType BarType) float64 {
+	CandleDataLock.Lock()
 	arr := candleData.Indicators[indicatorType][n][barType]
+	CandleDataLock.Unlock()
 	if len(arr) > i {
 		return arr[i]
 	}
 
 	for k := len(arr); k <= i; k++ {
 		arr = append(arr, fun(n, k, barType))
+		CandleDataLock.Lock()
 		candleData.Indicators[indicatorType][n][barType] = arr
+		CandleDataLock.Unlock()
 	}
 
 	return arr[i]
 }
 
 func (candleData *CandleData) ema(indicatorType IndicatorType, fun funEma, source, prev funGet, n, i int, barType BarType) float64 {
+	CandleDataLock.Lock()
 	arr := candleData.Indicators[indicatorType][n][barType]
+	CandleDataLock.Unlock()
 	if len(arr) > i {
 		return arr[i]
 	}
 
 	for k := len(arr); k <= i; k++ {
 		arr = append(arr, fun(source, prev, n, k, barType))
+		CandleDataLock.Lock()
 		candleData.Indicators[indicatorType][n][barType] = arr
+		CandleDataLock.Unlock()
 	}
 
 	return arr[i]
@@ -298,18 +309,22 @@ func (candleData *CandleData) fillIndicators() {
 		candleData.Indicators[indicatorType] = make(map[int]map[BarType][]float64)
 	}
 
-	for n := 3; n <= 70; n++ {
-		fmt.Println(n)
-		for _, indicatorType := range append(IndicatorTypes, AdditionalIndicatorTypes...) {
-			candleData.Indicators[indicatorType][n] = make(map[BarType][]float64)
-		}
+	parallel(3, 71, func(ys <-chan int) {
+		for n := range ys {
+			fmt.Println(n)
+			for _, indicatorType := range append(IndicatorTypes, AdditionalIndicatorTypes...) {
+				CandleDataLock.Lock()
+				candleData.Indicators[indicatorType][n] = make(map[BarType][]float64)
+				CandleDataLock.Unlock()
+			}
 
-		for _, barType := range BarTypes {
-			candleData.getSma(n, l, barType)
-			candleData.getEma(n, l, barType)
-			candleData.getDema(n, l, barType)
-			candleData.getTema(n, l, barType)
-			candleData.getTemaZero(n, l, barType)
+			for _, barType := range BarTypes {
+				candleData.getSma(n, l, barType)
+				candleData.getEma(n, l, barType)
+				candleData.getDema(n, l, barType)
+				candleData.getTema(n, l, barType)
+				candleData.getTemaZero(n, l, barType)
+			}
 		}
-	}
+	})
 }
