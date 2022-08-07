@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"time"
 )
@@ -21,11 +20,6 @@ var exmo Exmo
 const resolution = "60"
 
 type ApiParams map[string]string
-
-func (exmo *Exmo) init() {
-	exmo.Key = os.Getenv("exmo.key")
-	exmo.Secret = os.Getenv("exmo.secret")
-}
 
 func (exmo *Exmo) downloadCandlesForSymbol(candleData *CandleData) {
 	endDate := time.Now().Unix()

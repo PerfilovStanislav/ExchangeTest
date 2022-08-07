@@ -29,7 +29,6 @@ func main() {
 	//	}
 	//}()
 
-	//restore := flag.Bool("restore", os.Getenv("restore") == "true", "Restore")
 	envTestFigiInterval := os.Getenv("testFigiInterval")
 	envTestOperations := os.Getenv("testOperations")
 
