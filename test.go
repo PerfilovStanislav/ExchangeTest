@@ -12,17 +12,19 @@ import (
 	//_ "github.com/lib/pq"
 )
 
+var TestStorage map[string]TestData
+
 type TestData struct {
-	FigiInterval string
-	//Figi                string
-	//Interval            tf.CandleInterval
+	FigiInterval        string
 	MaxWalletOperations []OperationParameter
 	MaxSpeedOperations  []OperationParameter
 	TotalOperations     []OperationParameter
 	CandleData          *CandleData
 }
 
-var TestStorage map[string]TestData
+var TestBarTypes = [10]BarType{
+	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, //O, C, H, L,
+}
 
 func initTestData(figiInterval string) *TestData {
 	data := TestStorage[figiInterval]
@@ -184,25 +186,13 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 										testData.MaxSpeedOperations = append(testData.MaxSpeedOperations, operation)
 									}
 
-									fmt.Printf("\n %s %s %s %s ⬆%s ⬇%s [%s %s %s] [%s %s %s]️️ %s",
-										color.New(color.FgHiGreen).Sprintf("%5d", int(100*(wallet-StartDeposit)/StartDeposit)),
-										//color.New(color.FgHiGreen).Sprintf("%7d", int(100*(wallet-StartDeposit)/StartDeposit)),
+									fmt.Printf("\n %s %s %s %s %s %s",
+										color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
+										color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
 										color.New(color.BgBlue).Sprintf("%4d", cnt),
 										color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
 										color.New(color.FgHiRed).Sprintf("%8.2f", speed),
-										color.New(color.BgHiGreen).Sprintf("%3d", op),
-										color.New(color.BgHiRed).Sprintf("%3d", cl),
-										//color.New(color.BgHiRed).Sprintf("%3d", clLoss),
-
-										color.New(color.FgHiBlue).Sprintf("%2d", indicatorType1),
-										color.New(color.FgWhite).Sprintf("%3s", barType1.getName()),
-										color.New(color.FgHiWhite).Sprintf("%2d", coef1),
-
-										color.New(color.FgHiBlue).Sprintf("%2d", indicatorType2),
-										color.New(color.FgWhite).Sprintf("%3s", barType2.getName()),
-										color.New(color.FgHiWhite).Sprintf("%2d", coef2),
-
-										color.New(color.FgHiRed).Sprintf("%4.2f%%", (maxLoss)*100.0),
+										operation.String(),
 									)
 								}
 

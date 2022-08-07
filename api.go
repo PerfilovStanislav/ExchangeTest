@@ -1,5 +1,5 @@
 package main
 
 type ApiInterface interface {
-	downloadCandlesByFigi(candleData *CandleData)
+	downloadCandlesForSymbol(candleData *CandleData)
 }

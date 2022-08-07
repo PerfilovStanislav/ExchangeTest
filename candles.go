@@ -4,13 +4,10 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	_ "github.com/jackc/pgx"
-	_ "github.com/jackc/pgx/stdlib"
+	"github.com/fatih/color"
 	"io/ioutil"
 	"reflect"
-	"sync"
 	"time"
-	//_ "github.com/lib/pq"
 )
 
 type Candle struct {
@@ -31,39 +28,10 @@ type Candle struct {
 	T   time.Time
 }
 
-type IndicatorType int8
-
-const (
-	IndicatorTypeSma      IndicatorType = 1
-	IndicatorTypeEma      IndicatorType = 2
-	IndicatorTypeDema     IndicatorType = 3
-	IndicatorTypeTema     IndicatorType = 4
-	IndicatorTypeTemaZero IndicatorType = 5 // zero
-)
-
-var IndicatorTypes = []IndicatorType{
-	IndicatorTypeSma, IndicatorTypeEma, IndicatorTypeDema, IndicatorTypeTema,
-	IndicatorTypeTemaZero,
-}
-
-const (
-	IndicatorType2Ema     IndicatorType = 6
-	IndicatorType3Ema     IndicatorType = 7
-	IndicatorTypeEmaTema  IndicatorType = 8
-	IndicatorType2EmaTema IndicatorType = 9
-	IndicatorType3EmaTema IndicatorType = 10
-	IndicatorType2Tema    IndicatorType = 11
-)
-
-var AdditionalIndicatorTypes = []IndicatorType{
-	IndicatorType2Ema, IndicatorType3Ema, IndicatorTypeEmaTema, IndicatorType2EmaTema, IndicatorType3EmaTema,
-	IndicatorType2Tema,
-}
-
 type BarType int8
 
 const (
-	L = BarType(iota)
+	L BarType = iota
 	O
 	C
 	H
@@ -79,35 +47,81 @@ const (
 	OCH
 )
 
-func (barType BarType) getName() string {
-	return [14]string{
-		"L", "O", "C", "H", "LO", "LC", "LH", "OC", "OH", "CH", "LOC", "LOH", "LCH", "OCH",
-	}[barType]
-}
-
-var BarTypes = [14]BarType{
-	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, O, C, H, L,
-}
-
-var TestBarTypes = [10]BarType{
-	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, //O, C, H, L,
-}
-
-var CandleDataLock sync.Mutex
-
 type CandleData struct {
 	FigiInterval string
-	//Figi       string
-	//Interval   tf.CandleInterval
-	Time       []time.Time
-	Candles    map[BarType][]float64
-	Indicators map[IndicatorType]map[int]map[BarType][]float64
+	Time         []time.Time
+	Candles      map[BarType][]float64
+	Indicators   map[IndicatorType]map[int]map[BarType][]float64
 }
 
 var CandleStorage map[string]CandleData
 
+func (barType BarType) String() string {
+	return map[BarType]string{
+		L:   "L",
+		O:   "O",
+		C:   "C",
+		H:   "H",
+		LO:  "LO",
+		LC:  "LC",
+		LH:  "LH",
+		OC:  "OC",
+		OH:  "OH",
+		CH:  "CH",
+		LOC: "LOC",
+		LOH: "LOH",
+		LCH: "LCH",
+		OCH: "OCH",
+	}[barType]
+}
+
+func (barType BarType) value(s string) BarType {
+	return map[string]BarType{
+		"L":   L,
+		"O":   O,
+		"C":   C,
+		"H":   H,
+		"LO":  LO,
+		"LC":  LC,
+		"LH":  LH,
+		"OC":  OC,
+		"OH":  OH,
+		"CH":  CH,
+		"LOC": LOC,
+		"LOH": LOH,
+		"LCH": LCH,
+		"OCH": OCH,
+	}[s]
+}
+
+var BarTypes = [14]BarType{
+	L, O, C, H, LO, LC, LH, OC, OH, CH, LOC, LOH, LCH, OCH,
+}
+
+type IndicatorType int8
+
+const (
+	IndicatorTypeSma IndicatorType = iota + 1
+	IndicatorTypeEma
+	IndicatorTypeDema
+	IndicatorTypeTema
+	IndicatorTypeTemaZero
+	IndicatorType2Ema
+	IndicatorType3Ema
+	IndicatorTypeEmaTema
+	IndicatorType2EmaTema
+	IndicatorType3EmaTema
+	IndicatorType2Tema
+)
+
+var IndicatorTypes = [11]IndicatorType{
+	IndicatorTypeSma, IndicatorTypeEma, IndicatorTypeDema, IndicatorTypeTema, IndicatorTypeTemaZero, IndicatorType2Ema,
+	IndicatorType3Ema, IndicatorTypeEmaTema, IndicatorType2EmaTema, IndicatorType3EmaTema, IndicatorType2Tema,
+}
+
 func initCandleData(figiInterval string) *CandleData {
 	candleData := CandleStorage[figiInterval]
+	candleData.Candles = make(map[BarType][]float64)
 	candleData.Indicators = make(map[IndicatorType]map[int]map[BarType][]float64)
 	candleData.FigiInterval = figiInterval
 	return &candleData
@@ -139,6 +153,11 @@ func (candleData *CandleData) backup() {
 	_ = ioutil.WriteFile(fmt.Sprintf("candles_%s.dat", candleData.FigiInterval), dataOut, 0644)
 }
 
+func (candleData *CandleData) getPairName() string {
+	figi, _ := getFigiAndInterval(candleData.FigiInterval)
+	return figi
+}
+
 func (candleData *CandleData) save() {
 	CandleStorage[candleData.FigiInterval] = *candleData
 }
@@ -153,6 +172,10 @@ func (candleData *CandleData) index() int {
 
 func (candleData *CandleData) lastTime() time.Time {
 	return candleData.Time[candleData.index()]
+}
+
+func (candleData *CandleData) lastCandleValue(barType BarType) float64 {
+	return candleData.Candles[barType][candleData.index()]
 }
 
 func (candleData *CandleData) upsertCandle(c Candle) bool {
@@ -174,7 +197,7 @@ func (candleData *CandleData) upsertCandle(c Candle) bool {
 
 func (candle Candle) getPrice(barType BarType) float64 {
 	r := reflect.ValueOf(candle)
-	f := reflect.Indirect(r).FieldByName(barType.getName())
+	f := reflect.Indirect(r).FieldByName(barType.String())
 	return f.Float()
 }
 
@@ -219,36 +242,28 @@ func (candleData *CandleData) getCandle(n, i int, barType BarType) float64 {
 }
 
 func (candleData *CandleData) get(indicatorType IndicatorType, fun funGet, n, i int, barType BarType) float64 {
-	CandleDataLock.Lock()
 	arr := candleData.Indicators[indicatorType][n][barType]
-	CandleDataLock.Unlock()
 	if len(arr) > i {
 		return arr[i]
 	}
 
 	for k := len(arr); k <= i; k++ {
 		arr = append(arr, fun(n, k, barType))
-		CandleDataLock.Lock()
 		candleData.Indicators[indicatorType][n][barType] = arr
-		CandleDataLock.Unlock()
 	}
 
 	return arr[i]
 }
 
 func (candleData *CandleData) ema(indicatorType IndicatorType, fun funEma, source, prev funGet, n, i int, barType BarType) float64 {
-	CandleDataLock.Lock()
 	arr := candleData.Indicators[indicatorType][n][barType]
-	CandleDataLock.Unlock()
 	if len(arr) > i {
 		return arr[i]
 	}
 
 	for k := len(arr); k <= i; k++ {
 		arr = append(arr, fun(source, prev, n, k, barType))
-		CandleDataLock.Lock()
 		candleData.Indicators[indicatorType][n][barType] = arr
-		CandleDataLock.Unlock()
 	}
 
 	return arr[i]
@@ -301,26 +316,95 @@ func (candleData *CandleData) getTemaZero(n, i int, barType BarType) float64 {
 func (candleData *CandleData) fillIndicators() {
 	l := candleData.index()
 
-	for _, indicatorType := range append(IndicatorTypes, AdditionalIndicatorTypes...) {
+	for _, indicatorType := range IndicatorTypes {
 		candleData.Indicators[indicatorType] = make(map[int]map[BarType][]float64)
 	}
 
-	parallel(3, 71, func(ys <-chan int) {
-		for n := range ys {
-			fmt.Println(n)
-			for _, indicatorType := range append(IndicatorTypes, AdditionalIndicatorTypes...) {
-				CandleDataLock.Lock()
-				candleData.Indicators[indicatorType][n] = make(map[BarType][]float64)
-				CandleDataLock.Unlock()
-			}
-
-			for _, barType := range BarTypes {
-				candleData.getSma(n, l, barType)
-				candleData.getEma(n, l, barType)
-				candleData.getDema(n, l, barType)
-				candleData.getTema(n, l, barType)
-				candleData.getTemaZero(n, l, barType)
-			}
+	for n := 3; n <= 70; n++ {
+		fmt.Println(n)
+		for _, indicatorType := range IndicatorTypes {
+			candleData.Indicators[indicatorType][n] = make(map[BarType][]float64)
 		}
-	})
+
+		for _, barType := range BarTypes {
+			candleData.getSma(n, l, barType)
+			candleData.getEma(n, l, barType)
+			candleData.getDema(n, l, barType)
+			candleData.getTema(n, l, barType)
+			candleData.getTemaZero(n, l, barType)
+		}
+	}
+}
+
+func (candleData *CandleData) fillIndicator(l int, ind IndicatorParameter) float64 {
+	return ind.getValue(candleData, l)
+}
+
+type OperationParameter struct {
+	FigiInterval string
+	Op           int
+	Ind1         IndicatorParameter
+	Cl           int
+	Ind2         IndicatorParameter
+}
+
+type IndicatorParameter struct {
+	IndicatorType IndicatorType
+	BarType       BarType
+	Coef          int
+}
+
+func (operation OperationParameter) getCandleData() *CandleData {
+	return getCandleData(operation.FigiInterval)
+}
+
+func (operation OperationParameter) getPairName() string {
+	return operation.getCandleData().getPairName()
+}
+
+func (indicatorType IndicatorType) getFunction(data *CandleData) funGet {
+	switch indicatorType {
+	case IndicatorTypeSma:
+		return data.getSma
+	case IndicatorTypeEma:
+		return data.getEma
+	case IndicatorTypeDema:
+		return data.getDema
+	case IndicatorTypeTema:
+		return data.getTema
+	case IndicatorTypeTemaZero:
+		return data.getTemaZero
+	}
+	return nil
+}
+
+func (indicator IndicatorParameter) getValue(data *CandleData, i int) float64 {
+	return indicator.IndicatorType.getFunction(data)(indicator.Coef, i, indicator.BarType)
+}
+
+func showOperations(operations []OperationParameter) string {
+	var str string
+	for _, operation := range operations {
+		str += operation.String()
+	}
+	return str
+}
+
+func (operation OperationParameter) String() string {
+	figi, _ := getFigiAndInterval(operation.FigiInterval)
+	return fmt.Sprintf("{%s %s %s|%s|%s}",
+		color.New(color.FgBlue).Sprintf("%s", figi),
+		color.New(color.BgHiGreen, color.FgBlack).Sprintf("%3d", operation.Op),
+		color.New(color.BgHiRed, color.FgBlack).Sprintf("%3d", operation.Cl),
+		operation.Ind1.String(),
+		operation.Ind2.String(),
+	)
+}
+
+func (indicator IndicatorParameter) String() string {
+	return fmt.Sprintf("%s %s %s",
+		color.New(color.FgHiBlue).Sprintf("%2d", indicator.IndicatorType),
+		color.New(color.FgHiWhite).Sprintf("%3s", indicator.BarType.String()),
+		color.New(color.FgYellow).Sprintf("%2d", indicator.Coef),
+	)
 }

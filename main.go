@@ -1,22 +1,12 @@
 package main
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/gob"
 	"fmt"
-	tf "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
-	_ "github.com/jackc/pgx"
-	_ "github.com/jackc/pgx/stdlib"
 	"github.com/joho/godotenv"
-	"io/ioutil"
-	"log"
 	"math/rand"
 	"os"
-	"runtime"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -50,7 +40,7 @@ func main() {
 		//figi, interval := getFigiAndInterval(envTestFigiInterval)
 		candleData := getCandleData(envTestFigiInterval + ".hour")
 		apiHandler = getApiHandler(envTestFigiInterval)
-		apiHandler.downloadCandlesByFigi(candleData)
+		apiHandler.downloadCandlesForSymbol(candleData)
 		candleData.testFigi()
 	}
 
@@ -61,7 +51,7 @@ func main() {
 			candleData := getCandleData(param + ".hour")
 			apiHandler = getApiHandler(envTestFigiInterval)
 			if !candleData.restore() {
-				apiHandler.downloadCandlesByFigi(candleData)
+				apiHandler.downloadCandlesForSymbol(candleData)
 			}
 
 			testData := getTestData(param + ".hour")
@@ -148,94 +138,6 @@ func fillOperationTestTimes(operationsForTest []*TestData) {
 	}
 }
 
-func getFigiAndInterval(str string) (string, tf.CandleInterval) {
-	param := strings.Split(str, ".")
-	return param[0], tf.CandleInterval(param[1])
-}
-
-func EncodeToBytes(p interface{}) []byte {
-	buf := bytes.Buffer{}
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(p)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("uncompressed size (bytes): ", len(buf.Bytes()))
-	return buf.Bytes()
-}
-
-func Compress(s []byte) []byte {
-
-	zipbuf := bytes.Buffer{}
-	zipped := gzip.NewWriter(&zipbuf)
-	zipped.Write(s)
-	zipped.Close()
-	fmt.Println("compressed size (bytes): ", len(zipbuf.Bytes()))
-	return zipbuf.Bytes()
-}
-
-func Decompress(s []byte) []byte {
-	rdr, _ := gzip.NewReader(bytes.NewReader(s))
-	data, err := ioutil.ReadAll(rdr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	rdr.Close()
-	fmt.Println("uncompressed size (bytes): ", len(data))
-	return data
-}
-
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
-
-func ReadFromFile(path string) []byte {
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	data, err := ioutil.ReadAll(f)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return data
-}
-
-// parallel processes the data in separate goroutines.
-func parallel(start, stop int, fn func(<-chan int)) {
-	count := stop - start
-	if count < 1 {
-		return
-	}
-
-	procs := runtime.GOMAXPROCS(0)
-	if procs > count {
-		procs = count
-	}
-
-	c := make(chan int, count)
-	for i := start; i < stop; i++ {
-		c <- i
-	}
-	close(c)
-
-	var wg sync.WaitGroup
-	for i := 0; i < procs; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			fn(c)
-		}()
-	}
-	wg.Wait()
-}
-
 func HeapPermutation(a []*TestData, size int) {
 	if size == 1 {
 		operationsTestMatrix = append(operationsTestMatrix, append(make([]*TestData, 0, len(a)), a...))
@@ -279,8 +181,4 @@ func timeMapToSlices(uniqueMap map[time.Time]bool) []time.Time {
 	}
 
 	return result
-}
-
-func figiInterval(figi string, interval tf.CandleInterval) string {
-	return fmt.Sprintf("%s_%s", figi, interval)
 }

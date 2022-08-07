@@ -101,7 +101,7 @@ package main
 //	}
 //}
 //
-//func (tinkoff *Tinkoff) downloadCandlesByFigi(candleData *CandleData) {
+//func (tinkoff *Tinkoff) downloadCandlesForSymbol(candleData *CandleData) {
 //	candleData.Candles = make(map[BarType][]float64)
 //
 //	endDate := time.Now().AddDate(0, 0, 0)
