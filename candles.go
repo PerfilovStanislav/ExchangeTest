@@ -143,10 +143,6 @@ func (candleData *CandleData) save() {
 	CandleStorage[candleData.FigiInterval] = *candleData
 }
 
-//func (candleData *CandleData) getFigiInterval() string {
-//	return figiInterval(candleData.Figi, candleData.Interval)
-//}
-
 func (candleData *CandleData) len() int {
 	return len(candleData.Time)
 }
