@@ -84,7 +84,7 @@ func (candleData *CandleData) parallelTestPair() {
 	var globalMaxSafety = 0.0
 
 	currentTime := time.Now().Unix()
-	parallel(0, 3, func(ys <-chan int) {
+	parallel(0, 50, func(ys <-chan int) {
 		for y := range ys {
 			//candleData.testPair(&globalMaxSpeed, &globalMaxWallet, &globalMaxSafety, 183+y, testData)
 			candleData.testPair(&globalMaxSpeed, &globalMaxWallet, &globalMaxSafety, y*25, testData)
