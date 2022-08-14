@@ -18,6 +18,8 @@ var envMinCnt int
 
 var envMaxLoss float64
 
+const additionalMoney = 4
+
 type TestData struct {
 	Pair                string
 	StrategiesMaxWallet []Strategy
@@ -97,9 +99,6 @@ func (candleData *CandleData) parallelTestPair() {
 }
 
 func (candleData *CandleData) testPair(globalMaxSpeed, globalMaxWallet, globalMaxSafety *float64, cl int, testData *TestData) {
-	var wallet, openedPrice, speed, maxWallet, maxLoss float64
-	var saveOperation int
-
 	for _, barType1 := range TestBarTypes {
 		for op := 20; op < 25; op += 5 {
 			for _, barType2 := range TestBarTypes {
@@ -110,14 +109,10 @@ func (candleData *CandleData) testPair(globalMaxSpeed, globalMaxWallet, globalMa
 							indicators2 := candleData.Indicators[indicatorType2]
 						out:
 							for coef2 := range indicators2 {
-								saveOperation = 0
-								wallet = StartDeposit
-								maxWallet = StartDeposit
-								maxLoss = 0
-								rnOpen := 0
-								rnSum := 0
-								openedCnt := 0.0
-								cnt := 0
+								wallet := StartDeposit
+								maxWallet := StartDeposit
+								maxLoss, openedCnt, speed, openedPrice := 0.0, 0.0, 0.0, 0.0
+								rnOpen, rnSum, cnt, saveOperation := 0, 0, 0, 0
 
 								strategy := Strategy{
 									candleData.Pair,
@@ -128,6 +123,7 @@ func (candleData *CandleData) testPair(globalMaxSpeed, globalMaxWallet, globalMa
 								}
 
 								for i, _ := range candleData.Time {
+									wallet += additionalMoney
 									if i == 0 {
 										continue
 									}
@@ -166,6 +162,8 @@ func (candleData *CandleData) testPair(globalMaxSpeed, globalMaxWallet, globalMa
 									}
 
 								}
+
+								wallet -= float64(len(candleData.Time)) * additionalMoney
 
 								if openedCnt >= 1 {
 									wallet += openedPrice * openedCnt
