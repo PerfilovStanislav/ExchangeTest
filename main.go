@@ -10,15 +10,32 @@ import (
 	"time"
 )
 
+var apiHandler ApiInterface
+
+var resolution string
+
 const StartDeposit = float64(100000.0)
 
 const Commission = float64(0.98)
 
-var apiHandler ApiInterface
-
-func main() {
+func init() {
 	_ = godotenv.Load()
 	rand.Seed(time.Now().UnixNano())
+
+	switch os.Getenv("exchange") {
+	case "exmo":
+		apiHandler = exmo
+	default:
+		apiHandler = exmo
+	}
+	resolution = os.Getenv("resolution")
+	minCnt = toInt(os.Getenv("min_cnt"))
+	years = toInt(os.Getenv("years"))
+	months = toInt(os.Getenv("months"))
+	days = toInt(os.Getenv("days"))
+}
+
+func main() {
 	//c := make(chan os.Signal, 1)
 	//signal.Notify(c, os.Interrupt, os.Kill)
 	//go func() {
@@ -29,41 +46,25 @@ func main() {
 	//	}
 	//}()
 
-	envTestFigiInterval := os.Getenv("testFigiInterval")
-	envTestOperations := os.Getenv("testOperations")
+	envTestPair := os.Getenv("testPair")
+	envTestPairs := os.Getenv("testPairs")
+	envTestStrategies := os.Getenv("testStrategies")
 
 	CandleStorage = make(map[string]CandleData)
 	TestStorage = make(map[string]TestData)
 
-	if envTestFigiInterval != "" {
-		//figi, interval := getFigiAndInterval(envTestFigiInterval)
-		candleData := getCandleData(envTestFigiInterval + ".hour")
-		apiHandler = getApiHandler(envTestFigiInterval)
-		apiHandler.downloadCandlesForSymbol(candleData)
-		candleData.testFigi()
+	if envTestPair != "" {
+		candleData := getCandleData(envTestPair)
+		apiHandler.downloadPairCandles(candleData)
+		candleData.parallelTestPair()
 	}
 
-	var operationsForTest []*TestData
-	if envTestOperations != "" {
-		envTestOperationParams := strings.Split(envTestOperations, ";")
-		for _, param := range envTestOperationParams {
-			candleData := getCandleData(param + ".hour")
-			apiHandler = getApiHandler(envTestFigiInterval)
-			if !candleData.restore() {
-				apiHandler.downloadCandlesForSymbol(candleData)
-			}
+	if envTestPairs != "" {
+		testPairs(envTestPairs)
+	}
 
-			testData := getTestData(param + ".hour")
-			if !testData.restore() {
-				candleData.testFigi()
-				testData.restore()
-			}
-			testData.saveToStorage()
-			operationsForTest = append(operationsForTest, testData)
-		}
-		fillOperationTestTimes(operationsForTest)
-		HeapPermutation(operationsForTest, len(operationsForTest))
-		testMatrixOperations(operationsTestMatrix)
+	if envTestStrategies != "" {
+		testStrategies(envTestStrategies)
 	}
 
 	fmt.Println("!")
@@ -81,32 +82,67 @@ func main() {
 
 }
 
-func getApiHandler(figi string) ApiInterface {
-	switch len(figi) {
-	//case 12:
-	//	return &tinkoff
-	default:
-		return &exmo
+func testPairs(envTestPairs string) {
+	var sliceTestData []*TestData
+	envTestOperationPairs := strings.Split(envTestPairs, ";")
+	for _, pair := range envTestOperationPairs {
+		candleData := getCandleData(pair)
+		apiHandler.downloadPairCandles(candleData)
+
+		testData := getTestData(pair)
+		if !testData.restore() {
+			candleData.parallelTestPair()
+			testData.restore()
+		}
+		testData.saveToStorage()
+		sliceTestData = append(sliceTestData, testData)
 	}
+	fillOperationTestTimes(sliceTestData)
+	HeapPermutation(sliceTestData, len(sliceTestData))
+	testMatrixOperations(operationsTestMatrix)
+}
+
+func testStrategies(envTestStrategies string) {
+	params := strings.Split(envTestStrategies, "}{")
+	params[0] = params[0][1:]
+	params[len(params)-1] = params[len(params)-1][:len(params[len(params)-1])-1]
+
+	var sliceTestData []*TestData
+	var strategies []Strategy
+	for _, param := range params {
+		strategy := getStrategy(param)
+		strategies = append(strategies, strategy)
+		testData := getTestData(strategy.Pair)
+		testData.StrategiesMaxWallet = []Strategy{strategy}
+		sliceTestData = append(sliceTestData, testData)
+	}
+	for _, strategy := range getUniqueStrategies(strategies) {
+		candleData := strategy.getCandleData()
+		apiHandler.downloadPairCandles(candleData)
+	}
+	fillOperationTestTimes(sliceTestData)
+	HeapPermutation(sliceTestData, len(sliceTestData))
+	testMatrixOperations(operationsTestMatrix)
 }
 
 func fillOperationTestTimes(operationsForTest []*TestData) {
 	for _, testData := range operationsForTest {
-		testData.TotalOperations = append(testData.MaxSpeedOperations, testData.MaxWalletOperations...)
-		testData.CandleData = getCandleData(testData.FigiInterval)
+		testData.TotalStrategies = append(testData.StrategiesMaxSpeed, testData.StrategiesMaxWallet...)
+		testData.TotalStrategies = append(testData.TotalStrategies, testData.StrategiesMinLoss...)
+		testData.CandleData = getCandleData(testData.Pair)
 	}
 
 	candleDataSlice := make([]*CandleData, len(operationsForTest), len(operationsForTest))
 
 	for i, testData := range operationsForTest {
-		candleDataSlice[i] = getCandleData(testData.FigiInterval)
+		candleDataSlice[i] = getCandleData(testData.Pair)
 	}
 
 	totalTimeMap := make(map[time.Time]bool)
 	operationTestTimes.exist = make(map[string]map[time.Time]bool)
 	for _, candleData := range candleDataSlice {
-		operationTestTimes.exist[candleData.FigiInterval] = timeSlicesToMap(candleData.Time)
-		totalTimeMap = mergeTimeMaps(totalTimeMap, operationTestTimes.exist[candleData.FigiInterval])
+		operationTestTimes.exist[candleData.Pair] = timeSlicesToMap(candleData.Time)
+		totalTimeMap = mergeTimeMaps(totalTimeMap, operationTestTimes.exist[candleData.Pair])
 	}
 
 	totalTimeSlices := timeMapToSlices(totalTimeMap)
@@ -124,14 +160,14 @@ func fillOperationTestTimes(operationsForTest []*TestData) {
 
 	operationTestTimes.indexes = make(map[string]map[time.Time]int)
 	for _, candleData := range candleDataSlice {
-		operationTestTimes.indexes[candleData.FigiInterval] = make(map[time.Time]int)
+		operationTestTimes.indexes[candleData.Pair] = make(map[time.Time]int)
 		j := -1
 		for _, t := range operationTestTimes.totalTimes {
-			if operationTestTimes.exist[candleData.FigiInterval][t] {
+			if operationTestTimes.exist[candleData.Pair][t] {
 				j++
-				operationTestTimes.indexes[candleData.FigiInterval][t] = j
+				operationTestTimes.indexes[candleData.Pair][t] = j
 			} else {
-				operationTestTimes.indexes[candleData.FigiInterval][t] = -1
+				operationTestTimes.indexes[candleData.Pair][t] = -1
 			}
 		}
 	}

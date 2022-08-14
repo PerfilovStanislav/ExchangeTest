@@ -14,30 +14,24 @@ import (
 	"sync"
 )
 
-func getOperationParameter(str string) OperationParameter {
-	var operationParameter OperationParameter
+func getStrategy(str string) Strategy {
+	p := strings.Fields(str)
 
-	params := strings.Split(str, "|")
-	figis := strings.Split(params[0], " ")
-	operationParameter.FigiInterval = figis[0] + ".hour"
-	operationParameter.Op = toInt(figis[1])
-	operationParameter.Cl = toInt(figis[2])
+	ind := func(t, b, c string) Indicator {
+		return Indicator{
+			IndicatorType: IndicatorType(toInt(t)),
+			BarType:       BarType(0).value(b),
+			Coef:          toInt(c),
+		}
+	}
 
-	operationParameter.Ind1 = getIndicatorParameter(params[1])
-	operationParameter.Ind2 = getIndicatorParameter(params[2])
-
-	return operationParameter
-}
-
-func getIndicatorParameter(str string) IndicatorParameter {
-	var indicatorParameter IndicatorParameter
-
-	split := strings.Split(str, " ")
-	indicatorParameter.IndicatorType = IndicatorType(toInt(split[0]))
-	indicatorParameter.BarType = BarType(0).value(split[1])
-	indicatorParameter.Coef = toInt(split[2])
-
-	return indicatorParameter
+	return Strategy{
+		Pair: p[0],
+		Op:   toInt(p[1]),
+		Ind1: ind(p[4], p[5], p[6]),
+		Cl:   toInt(p[2]),
+		Ind2: ind(p[8], p[9], p[10]),
+	}
 }
 
 func toInt(str string) int {
@@ -47,11 +41,6 @@ func toInt(str string) int {
 		return -100
 	}
 	return i
-}
-
-func getFigiAndInterval(str string) (string, string) {
-	param := strings.Split(str, ".")
-	return param[0], "hour"
 }
 
 func EncodeToBytes(p interface{}) []byte {
@@ -149,11 +138,11 @@ func getRightCurrency(pair string) Currency {
 	return currency
 }
 
-func getUniqueOperations(operations []OperationParameter) []OperationParameter {
-	var uniqueOperations []OperationParameter
+func getUniqueStrategies(operations []Strategy) []Strategy {
+	var uniqueOperations []Strategy
 	var symbols []string
 	for _, operation := range operations {
-		pair := operation.getPairName()
+		pair := operation.Pair
 		if sliceIndex(symbols, pair) == -1 {
 			symbols = append(symbols, pair)
 			uniqueOperations = append(uniqueOperations, operation)

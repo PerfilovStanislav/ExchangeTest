@@ -48,10 +48,10 @@ const (
 )
 
 type CandleData struct {
-	FigiInterval string
-	Time         []time.Time
-	Candles      map[BarType][]float64
-	Indicators   map[IndicatorType]map[int]map[BarType][]float64
+	Pair       string
+	Time       []time.Time
+	Candles    map[BarType][]float64
+	Indicators map[IndicatorType]map[int]map[BarType][]float64
 }
 
 var CandleStorage map[string]CandleData
@@ -119,24 +119,24 @@ var IndicatorTypes = [11]IndicatorType{
 	IndicatorType3Ema, IndicatorTypeEmaTema, IndicatorType2EmaTema, IndicatorType3EmaTema, IndicatorType2Tema,
 }
 
-func initCandleData(figiInterval string) *CandleData {
-	candleData := CandleStorage[figiInterval]
+func initCandleData(pair string) *CandleData {
+	candleData := CandleStorage[pair]
 	candleData.Candles = make(map[BarType][]float64)
 	candleData.Indicators = make(map[IndicatorType]map[int]map[BarType][]float64)
-	candleData.FigiInterval = figiInterval
+	candleData.Pair = pair
 	return &candleData
 }
 
-func getCandleData(figiInterval string) *CandleData {
-	candleData, ok := CandleStorage[figiInterval]
+func getCandleData(pair string) *CandleData {
+	candleData, ok := CandleStorage[pair]
 	if ok == false {
-		return initCandleData(figiInterval)
+		return initCandleData(pair)
 	}
 	return &candleData
 }
 
 func (candleData *CandleData) restore() bool {
-	fileName := fmt.Sprintf("candles_%s.dat", candleData.FigiInterval)
+	fileName := fmt.Sprintf("candles_%s.dat", candleData.Pair)
 	if !fileExists(fileName) {
 		return false
 	}
@@ -150,16 +150,11 @@ func (candleData *CandleData) restore() bool {
 
 func (candleData *CandleData) backup() {
 	dataOut := EncodeToBytes(candleData)
-	_ = ioutil.WriteFile(fmt.Sprintf("candles_%s.dat", candleData.FigiInterval), dataOut, 0644)
-}
-
-func (candleData *CandleData) getPairName() string {
-	figi, _ := getFigiAndInterval(candleData.FigiInterval)
-	return figi
+	_ = ioutil.WriteFile(fmt.Sprintf("candles_%s.dat", candleData.Pair), dataOut, 0644)
 }
 
 func (candleData *CandleData) save() {
-	CandleStorage[candleData.FigiInterval] = *candleData
+	CandleStorage[candleData.Pair] = *candleData
 }
 
 func (candleData *CandleData) len() int {
@@ -336,30 +331,26 @@ func (candleData *CandleData) fillIndicators() {
 	}
 }
 
-func (candleData *CandleData) fillIndicator(l int, ind IndicatorParameter) float64 {
+func (candleData *CandleData) fillIndicator(l int, ind Indicator) float64 {
 	return ind.getValue(candleData, l)
 }
 
-type OperationParameter struct {
-	FigiInterval string
-	Op           int
-	Ind1         IndicatorParameter
-	Cl           int
-	Ind2         IndicatorParameter
+type Strategy struct {
+	Pair string
+	Op   int
+	Ind1 Indicator
+	Cl   int
+	Ind2 Indicator
 }
 
-type IndicatorParameter struct {
+type Indicator struct {
 	IndicatorType IndicatorType
 	BarType       BarType
 	Coef          int
 }
 
-func (operation OperationParameter) getCandleData() *CandleData {
-	return getCandleData(operation.FigiInterval)
-}
-
-func (operation OperationParameter) getPairName() string {
-	return operation.getCandleData().getPairName()
+func (operation Strategy) getCandleData() *CandleData {
+	return getCandleData(operation.Pair)
 }
 
 func (indicatorType IndicatorType) getFunction(data *CandleData) funGet {
@@ -378,11 +369,11 @@ func (indicatorType IndicatorType) getFunction(data *CandleData) funGet {
 	return nil
 }
 
-func (indicator IndicatorParameter) getValue(data *CandleData, i int) float64 {
+func (indicator Indicator) getValue(data *CandleData, i int) float64 {
 	return indicator.IndicatorType.getFunction(data)(indicator.Coef, i, indicator.BarType)
 }
 
-func showOperations(operations []OperationParameter) string {
+func showOperations(operations []Strategy) string {
 	var str string
 	for _, operation := range operations {
 		str += operation.String()
@@ -390,10 +381,9 @@ func showOperations(operations []OperationParameter) string {
 	return str
 }
 
-func (operation OperationParameter) String() string {
-	figi, _ := getFigiAndInterval(operation.FigiInterval)
-	return fmt.Sprintf("{%s %s %s|%s|%s}",
-		color.New(color.FgBlue).Sprintf("%s", figi),
+func (operation Strategy) String() string {
+	return fmt.Sprintf("{ %s %s %s | %s | %s }",
+		color.New(color.FgBlue).Sprintf("%s", operation.Pair),
 		color.New(color.BgHiGreen, color.FgBlack).Sprintf("%3d", operation.Op),
 		color.New(color.BgHiRed, color.FgBlack).Sprintf("%3d", operation.Cl),
 		operation.Ind1.String(),
@@ -401,10 +391,23 @@ func (operation OperationParameter) String() string {
 	)
 }
 
-func (indicator IndicatorParameter) String() string {
+func (indicator Indicator) String() string {
 	return fmt.Sprintf("%s %s %s",
 		color.New(color.FgHiBlue).Sprintf("%2d", indicator.IndicatorType),
 		color.New(color.FgHiWhite).Sprintf("%3s", indicator.BarType.String()),
 		color.New(color.FgYellow).Sprintf("%2d", indicator.Coef),
 	)
+}
+
+func (candleData *CandleData) getIndicatorValue(indicator Indicator) []float64 {
+	return candleData.Indicators[indicator.IndicatorType][indicator.Coef][indicator.BarType]
+}
+
+func (candleData *CandleData) getIndicatorRatio(strategy Strategy, index int) float64 {
+	a := candleData.getIndicatorValue(strategy.Ind1)
+	b := candleData.getIndicatorValue(strategy.Ind2)
+	if a == nil || b == nil {
+		fmt.Println(a, b)
+	}
+	return a[index] / b[index]
 }

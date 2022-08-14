@@ -17,31 +17,31 @@ var operationTestTimes = struct {
 func testMatrixOperations(operationsTestMatrix [][]*TestData) {
 	var maxWallet float64
 	for _, testDataSlice := range operationsTestMatrix {
-		testSliceOfOperations(0, len(testDataSlice), testDataSlice, []OperationParameter{}, &maxWallet)
+		testSliceOfOperations(0, len(testDataSlice), testDataSlice, []Strategy{}, &maxWallet)
 	}
 }
 
-func testSliceOfOperations(i, l int, testDataSlice []*TestData, operationParameters []OperationParameter, maxWallet *float64) {
+func testSliceOfOperations(i, l int, testDataSlice []*TestData, operationParameters []Strategy, maxWallet *float64) {
 	testData := testDataSlice[i]
 	if i == l-1 {
-		parallel(0, len(testData.TotalOperations), func(ys <-chan int) {
+		parallel(0, len(testData.TotalStrategies), func(ys <-chan int) {
 			for y := range ys {
-				testOperations(append(operationParameters, testData.TotalOperations[y]), maxWallet)
+				testOperations(append(operationParameters, testData.TotalStrategies[y]), maxWallet)
 			}
 		})
 		return
 	} else {
-		for _, op := range testData.TotalOperations {
+		for _, op := range testData.TotalStrategies {
 			testSliceOfOperations(i+1, l, testDataSlice, append(operationParameters, op), maxWallet)
 		}
 	}
 }
 
-func testOperations(operationParameters []OperationParameter, maxWallet *float64) {
+func testOperations(strategies []Strategy, maxWallet *float64) {
 	wallet := StartDeposit
 	rnOpen := 0
 	rnSum := 0
-	openedCnt := 0
+	openedCnt := 0.0
 	cnt := 0
 	cl := 0
 	show := false
@@ -49,34 +49,34 @@ func testOperations(operationParameters []OperationParameter, maxWallet *float64
 
 	var candleData *CandleData
 
-	for _, t := range operationTestTimes.totalTimes[1:] {
-		//if i == 0 {
-		//	continue
-		//}
+	for i, t := range operationTestTimes.totalTimes[1:] {
+		if i == 0 {
+			continue
+		}
 
 		if openedCnt == 0 {
-			for _, parameter := range operationParameters {
-				candleData = getCandleData(parameter.FigiInterval)
-				index := operationTestTimes.indexes[parameter.FigiInterval][t]
+			for _, strategy := range strategies {
+				candleData = getCandleData(strategy.Pair)
+				index := operationTestTimes.indexes[strategy.Pair][t]
 				if index > 0 {
-					x := 10000 * candleData.getIndicatorRatio(parameter, index-1)
-					if x >= float64(10000+parameter.Op) {
-						cl = parameter.Cl
+					x := 10000 * candleData.getIndicatorRatio(strategy, index-1)
+					if x >= float64(10000+strategy.Op) {
+						cl = strategy.Cl
 
 						openedPrice = candleData.Candles[O][index]
-						openedCnt = int(wallet / openedPrice)
-						wallet -= openedPrice * float64(openedCnt)
+						openedCnt = wallet / openedPrice
+						wallet -= openedPrice * openedCnt
 						rnOpen = index
 						break
 					}
 				}
 			}
 		} else {
-			index := operationTestTimes.indexes[candleData.FigiInterval][t]
+			index := operationTestTimes.indexes[candleData.Pair][t]
 			if index > 0 {
 				o := candleData.Candles[O][index]
 				if 10000*o/openedPrice >= float64(10000+cl) {
-					wallet += o * float64(openedCnt)
+					wallet += o * openedCnt * Commission
 
 					cl = 0
 					openedCnt = 0
@@ -89,7 +89,7 @@ func testOperations(operationParameters []OperationParameter, maxWallet *float64
 	}
 
 	if openedCnt >= 1 {
-		wallet += openedPrice * float64(openedCnt) * Commission
+		wallet += openedPrice * openedCnt
 	}
 
 	if wallet > *maxWallet {
@@ -99,10 +99,10 @@ func testOperations(operationParameters []OperationParameter, maxWallet *float64
 
 	if show {
 		fmt.Printf("\n %s %s %s %s",
-			color.New(color.FgHiGreen).Sprintf("%8d", int(wallet-StartDeposit)),
+			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
 			color.New(color.BgBlue).Sprintf("cnt:%4d", cnt),
 			color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
-			showOperations(operationParameters),
+			showOperations(strategies),
 		)
 	}
 

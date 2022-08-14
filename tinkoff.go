@@ -101,7 +101,7 @@ package main
 //	}
 //}
 //
-//func (tinkoff *Tinkoff) downloadCandlesForSymbol(candleData *CandleData) {
+//func (tinkoff *Tinkoff) downloadPairCandles(candleData *CandleData) {
 //	candleData.Candles = make(map[BarType][]float64)
 //
 //	endDate := time.Now().AddDate(0, 0, 0)
@@ -115,7 +115,7 @@ package main
 //		from := startDate
 //		to := startDate.AddDate(0, 0, 7)
 //
-//		figi, interval := getFigiAndInterval(candleData.FigiInterval)
+//		figi, interval := getFigiAndInterval(candleData.Pair)
 //		candles, err := tinkoff.getApiClient().Candles(ctx, from, to, interval, figi)
 //		if err != nil {
 //			fmt.Sprintln(err)

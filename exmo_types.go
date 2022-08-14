@@ -14,18 +14,18 @@ type Exmo struct {
 }
 
 type OpenedOrder struct {
-	OperationParameter
+	Strategy
 	OpenedPrice float64
 }
 
 type Currency string
 
 func (candleHistory ExmoCandleHistoryResponse) isEmpty() bool {
-	return candleHistory.S != ""
+	return len(candleHistory.Candles) == 0
 }
 
 func (order OpenedOrder) isEmpty() bool {
-	return order.OperationParameter.FigiInterval == ""
+	return order.Strategy.Pair == ""
 }
 
 type Price float64

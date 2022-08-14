@@ -17,21 +17,23 @@ import (
 
 var exmo Exmo
 
-const resolution = "60"
-
 type ApiParams map[string]string
 
-func (exmo *Exmo) downloadCandlesForSymbol(candleData *CandleData) {
-	endDate := time.Now().Unix()
-	startDate := time.Now().AddDate(-1, 0, 0).Unix()
+var years, months, days int
 
-	figi := candleData.getPairName()
+func (exmo Exmo) downloadPairCandles(candleData *CandleData) {
+	if candleData.restore() {
+		return
+	}
+
+	endDate := time.Now().Unix()
+	startDate := time.Now().AddDate(years, months, days).Unix()
 
 	for startDate < endDate {
 		from := startDate
 		to := startDate + 125*3600
 
-		candleHistory := exmo.apiGetCandles(figi, resolution, from, to)
+		candleHistory := exmo.apiGetCandles(candleData.Pair, resolution, from, to)
 
 		startDate = to
 
@@ -55,7 +57,7 @@ func (exmo *Exmo) downloadCandlesForSymbol(candleData *CandleData) {
 	candleData.backup()
 }
 
-func (exmo *Exmo) apiGetCandles(symbol, resolution string, from, to int64) ExmoCandleHistoryResponse {
+func (exmo Exmo) apiGetCandles(symbol, resolution string, from, to int64) ExmoCandleHistoryResponse {
 	params := ApiParams{
 		"symbol":     symbol,
 		"resolution": resolution,
@@ -76,7 +78,7 @@ func (exmo *Exmo) apiGetCandles(symbol, resolution string, from, to int64) ExmoC
 	return candleHistory
 }
 
-func (exmo *Exmo) apiQuery(method string, params ApiParams) ([]byte, error) {
+func (exmo Exmo) apiQuery(method string, params ApiParams) ([]byte, error) {
 	postParams := url.Values{}
 	postParams.Add("nonce", nonce())
 	if params != nil {

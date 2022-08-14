@@ -14,34 +14,37 @@ import (
 
 var TestStorage map[string]TestData
 
+var minCnt int
+
 type TestData struct {
-	FigiInterval        string
-	MaxWalletOperations []OperationParameter
-	MaxSpeedOperations  []OperationParameter
-	TotalOperations     []OperationParameter
+	Pair                string
+	StrategiesMaxWallet []Strategy
+	StrategiesMaxSpeed  []Strategy
+	StrategiesMinLoss   []Strategy
+	TotalStrategies     []Strategy
 	CandleData          *CandleData
 }
 
-var TestBarTypes = [10]BarType{
-	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, //O, C, H, L,
+var TestBarTypes = [2]BarType{
+	/*LOC, LOH, LCH, OCH, */ LO /*LC,*/, LH, /*OC, OH, CH,*/ //O, C, H, L,
 }
 
-func initTestData(figiInterval string) *TestData {
-	data := TestStorage[figiInterval]
-	data.FigiInterval = figiInterval
+func initTestData(pair string) *TestData {
+	data := TestStorage[pair]
+	data.Pair = pair
 	return &data
 }
 
-func getTestData(figiInterval string) *TestData {
-	data, ok := TestStorage[figiInterval]
+func getTestData(pair string) *TestData {
+	data, ok := TestStorage[pair]
 	if ok == false {
-		return initTestData(figiInterval)
+		return initTestData(pair)
 	}
 	return &data
 }
 
 func (testData *TestData) restore() bool {
-	fileName := fmt.Sprintf("tests_%s.dat", testData.FigiInterval)
+	fileName := fmt.Sprintf("tests_%s.dat", testData.Pair)
 	if !fileExists(fileName) {
 		return false
 	}
@@ -53,14 +56,14 @@ func (testData *TestData) restore() bool {
 }
 
 func (testData *TestData) backup() {
-	testData.MaxWalletOperations = testData.MaxWalletOperations[maxInt(len(testData.MaxWalletOperations)-60, 0):]
-	testData.MaxSpeedOperations = testData.MaxSpeedOperations[maxInt(len(testData.MaxSpeedOperations)-200, 0):]
+	testData.StrategiesMaxWallet = testData.StrategiesMaxWallet[maxInt(len(testData.StrategiesMaxWallet)-60, 0):]
+	testData.StrategiesMaxSpeed = testData.StrategiesMaxSpeed[maxInt(len(testData.StrategiesMaxSpeed)-200, 0):]
 	dataOut := EncodeToBytes(testData)
-	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s.dat", testData.FigiInterval), dataOut, 0644)
+	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s.dat", testData.Pair), dataOut, 0644)
 }
 
 func (testData *TestData) saveToStorage() {
-	TestStorage[testData.FigiInterval] = *testData
+	TestStorage[testData.Pair] = *testData
 }
 
 func maxInt(x, y int) int {
@@ -70,39 +73,39 @@ func maxInt(x, y int) int {
 	return y
 }
 
-func (candleData *CandleData) testFigi() {
-	testData := getTestData(candleData.FigiInterval)
+func (candleData *CandleData) parallelTestPair() {
+	testData := getTestData(candleData.Pair)
 
 	var globalMaxSpeed = 0.0
 	var globalMaxWallet = 0.0
 
 	currentTime := time.Now().Unix()
-	parallel(0, 50, func(ys <-chan int) {
+	parallel(0, 3, func(ys <-chan int) {
 		for y := range ys {
-			testFigi(&globalMaxSpeed, &globalMaxWallet, y*25, candleData, testData)
+			candleData.testPair(&globalMaxSpeed, &globalMaxWallet, 183+y, testData)
+			//parallelTestPair(&globalMaxSpeed, &globalMaxWallet, y*25, candleData, testData)
 		}
 	})
+	//candleData.testPair(&globalMaxSpeed, &globalMaxWallet, 184, testData)
 	fmt.Println(time.Now().Unix() - currentTime)
 
 	testData.backup()
 }
 
-func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleData *CandleData, testData *TestData) {
+func (candleData *CandleData) testPair(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, testData *TestData) {
 	var wallet, openedPrice, speed, maxWallet, maxLoss float64
 	var saveOperation int
 
 	for _, barType1 := range TestBarTypes {
-		for op := 0; op < 60; op += 5 {
+		for op := 20; op < 25; op += 5 {
 			for _, barType2 := range TestBarTypes {
 				for _, indicatorType1 := range IndicatorTypes {
 					indicators1 := candleData.Indicators[indicatorType1]
-					for coef1, bars1 := range indicators1 {
-
+					for coef1 := range indicators1 {
 						for _, indicatorType2 := range IndicatorTypes {
 							indicators2 := candleData.Indicators[indicatorType2]
 						out:
-							for coef2, bars2 := range indicators2 {
-
+							for coef2 := range indicators2 {
 								saveOperation = 0
 								wallet = StartDeposit
 								maxWallet = StartDeposit
@@ -112,6 +115,14 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 								openedCnt := 0.0
 								cnt := 0
 
+								strategy := Strategy{
+									candleData.Pair,
+									op,
+									Indicator{indicatorType1, barType1, coef1},
+									cl,
+									Indicator{indicatorType2, barType2, coef2},
+								}
+
 								for i, _ := range candleData.Time {
 									if i == 0 {
 										continue
@@ -119,7 +130,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 
 									o := candleData.Candles[O][i]
 									if openedCnt == 0 {
-										if bars1[barType1][i-1]*10000/bars2[barType2][i-1] >= float64(10000+op) {
+										if 10000*candleData.getIndicatorRatio(strategy, i-1) >= float64(10000+op) {
 											openedPrice = o
 											openedCnt = wallet / openedPrice
 											wallet -= openedPrice * openedCnt
@@ -162,8 +173,8 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 								}
 
 								speed = (wallet - StartDeposit) / float64(rnSum)
-								if cnt >= 25 && rnSum > 1 {
-									if speed > (*globalMaxSpeed)*0.995 /* 1000.0*/ {
+								if cnt >= minCnt && rnSum > 1 {
+									if speed > (*globalMaxSpeed)*0.996 /* 1000.0*/ {
 										saveOperation += 2
 										if speed > *globalMaxSpeed {
 											*globalMaxSpeed = speed
@@ -172,18 +183,11 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 								}
 
 								if saveOperation > 0 {
-									operation := OperationParameter{
-										candleData.FigiInterval,
-										op,
-										IndicatorParameter{indicatorType1, barType1, coef1},
-										cl,
-										IndicatorParameter{indicatorType2, barType2, coef2},
-									}
 									if saveOperation&1 == 1 {
-										testData.MaxWalletOperations = append(testData.MaxWalletOperations, operation)
+										testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
 									}
 									if saveOperation&2 == 2 {
-										testData.MaxSpeedOperations = append(testData.MaxSpeedOperations, operation)
+										testData.StrategiesMaxSpeed = append(testData.StrategiesMaxSpeed, strategy)
 									}
 
 									fmt.Printf("\n %s %s %s %s %s %s",
@@ -192,7 +196,7 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 										color.New(color.BgBlue).Sprintf("%4d", cnt),
 										color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
 										color.New(color.FgHiRed).Sprintf("%8.2f", speed),
-										operation.String(),
+										strategy.String(),
 									)
 								}
 
@@ -203,12 +207,4 @@ func testFigi(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, candleD
 			}
 		}
 	}
-}
-
-func (candleData *CandleData) getIndicatorValue(indicator IndicatorParameter) []float64 {
-	return candleData.Indicators[indicator.IndicatorType][indicator.Coef][indicator.BarType]
-}
-
-func (candleData *CandleData) getIndicatorRatio(operation OperationParameter, index int) float64 {
-	return candleData.getIndicatorValue(operation.Ind1)[index] / candleData.getIndicatorValue(operation.Ind2)[index]
 }
