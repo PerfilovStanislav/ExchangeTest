@@ -29,7 +29,8 @@ func init() {
 		apiHandler = exmo
 	}
 	resolution = os.Getenv("resolution")
-	minCnt = toInt(os.Getenv("min_cnt"))
+	envMinCnt = toInt(os.Getenv("min_cnt"))
+	envMaxLoss = s2f(os.Getenv("max_loss"))
 	years = toInt(os.Getenv("years"))
 	months = toInt(os.Getenv("months"))
 	days = toInt(os.Getenv("days"))
@@ -128,7 +129,7 @@ func testStrategies(envTestStrategies string) {
 func fillOperationTestTimes(operationsForTest []*TestData) {
 	for _, testData := range operationsForTest {
 		testData.TotalStrategies = append(testData.StrategiesMaxSpeed, testData.StrategiesMaxWallet...)
-		testData.TotalStrategies = append(testData.TotalStrategies, testData.StrategiesMinLoss...)
+		testData.TotalStrategies = append(testData.TotalStrategies, testData.StrategiesMaxSafety...)
 		testData.CandleData = getCandleData(testData.Pair)
 	}
 

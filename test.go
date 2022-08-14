@@ -14,19 +14,21 @@ import (
 
 var TestStorage map[string]TestData
 
-var minCnt int
+var envMinCnt int
+
+var envMaxLoss float64
 
 type TestData struct {
 	Pair                string
 	StrategiesMaxWallet []Strategy
 	StrategiesMaxSpeed  []Strategy
-	StrategiesMinLoss   []Strategy
+	StrategiesMaxSafety []Strategy
 	TotalStrategies     []Strategy
 	CandleData          *CandleData
 }
 
-var TestBarTypes = [2]BarType{
-	/*LOC, LOH, LCH, OCH, */ LO /*LC,*/, LH, /*OC, OH, CH,*/ //O, C, H, L,
+var TestBarTypes = []BarType{
+	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, //O, C, H, L,
 }
 
 func initTestData(pair string) *TestData {
@@ -56,8 +58,9 @@ func (testData *TestData) restore() bool {
 }
 
 func (testData *TestData) backup() {
-	testData.StrategiesMaxWallet = testData.StrategiesMaxWallet[maxInt(len(testData.StrategiesMaxWallet)-60, 0):]
-	testData.StrategiesMaxSpeed = testData.StrategiesMaxSpeed[maxInt(len(testData.StrategiesMaxSpeed)-200, 0):]
+	testData.StrategiesMaxSafety = testData.StrategiesMaxSafety[maxInt(len(testData.StrategiesMaxSafety)-40, 0):]
+	testData.StrategiesMaxWallet = testData.StrategiesMaxWallet[maxInt(len(testData.StrategiesMaxWallet)-40, 0):]
+	testData.StrategiesMaxSpeed = testData.StrategiesMaxSpeed[maxInt(len(testData.StrategiesMaxSpeed)-100, 0):]
 	dataOut := EncodeToBytes(testData)
 	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s.dat", testData.Pair), dataOut, 0644)
 }
@@ -78,12 +81,13 @@ func (candleData *CandleData) parallelTestPair() {
 
 	var globalMaxSpeed = 0.0
 	var globalMaxWallet = 0.0
+	var globalMaxSafety = 0.0
 
 	currentTime := time.Now().Unix()
 	parallel(0, 3, func(ys <-chan int) {
 		for y := range ys {
-			candleData.testPair(&globalMaxSpeed, &globalMaxWallet, 183+y, testData)
-			//parallelTestPair(&globalMaxSpeed, &globalMaxWallet, y*25, candleData, testData)
+			//candleData.testPair(&globalMaxSpeed, &globalMaxWallet, &globalMaxSafety, 183+y, testData)
+			candleData.testPair(&globalMaxSpeed, &globalMaxWallet, &globalMaxSafety, y*25, testData)
 		}
 	})
 	//candleData.testPair(&globalMaxSpeed, &globalMaxWallet, 184, testData)
@@ -92,7 +96,7 @@ func (candleData *CandleData) parallelTestPair() {
 	testData.backup()
 }
 
-func (candleData *CandleData) testPair(globalMaxSpeed *float64, globalMaxWallet *float64, cl int, testData *TestData) {
+func (candleData *CandleData) testPair(globalMaxSpeed, globalMaxWallet, globalMaxSafety *float64, cl int, testData *TestData) {
 	var wallet, openedPrice, speed, maxWallet, maxLoss float64
 	var saveOperation int
 
@@ -155,7 +159,7 @@ func (candleData *CandleData) testPair(globalMaxSpeed *float64, globalMaxWallet 
 										loss := 1 - l*openedCnt/maxWallet
 										if loss > maxLoss {
 											maxLoss = loss
-											if maxLoss >= 0.50 {
+											if maxLoss >= envMaxLoss {
 												continue out
 											}
 										}
@@ -167,30 +171,40 @@ func (candleData *CandleData) testPair(globalMaxSpeed *float64, globalMaxWallet 
 									wallet += openedPrice * openedCnt
 								}
 
+								if rnSum == 0 || cnt < envMinCnt {
+									continue out
+								}
+
 								if wallet > *globalMaxWallet {
 									*globalMaxWallet = wallet
 									saveOperation += 1
 								}
 
 								speed = (wallet - StartDeposit) / float64(rnSum)
-								if cnt >= minCnt && rnSum > 1 {
-									if speed > (*globalMaxSpeed)*0.996 /* 1000.0*/ {
-										saveOperation += 2
-										if speed > *globalMaxSpeed {
-											*globalMaxSpeed = speed
-										}
+								if speed > (*globalMaxSpeed)*0.996 /* 1000.0*/ {
+									saveOperation += 2
+									if speed > *globalMaxSpeed {
+										*globalMaxSpeed = speed
 									}
 								}
 
+								safety := wallet / maxLoss
+								if safety > *globalMaxSafety {
+									*globalMaxSafety = safety
+									saveOperation += 4
+								}
+
 								if saveOperation > 0 {
-									if saveOperation&1 == 1 {
+									if saveOperation&4 == 4 {
+										testData.StrategiesMaxSafety = append(testData.StrategiesMaxSafety, strategy)
+									} else if saveOperation&2 == 2 {
+										testData.StrategiesMaxSpeed = append(testData.StrategiesMaxSpeed, strategy)
+									} else if saveOperation&1 == 1 {
 										testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
 									}
-									if saveOperation&2 == 2 {
-										testData.StrategiesMaxSpeed = append(testData.StrategiesMaxSpeed, strategy)
-									}
 
-									fmt.Printf("\n %s %s %s %s %s %s",
+									fmt.Printf("\n %d %s %s %s %s %s %s",
+										saveOperation,
 										color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
 										color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
 										color.New(color.BgBlue).Sprintf("%4d", cnt),
