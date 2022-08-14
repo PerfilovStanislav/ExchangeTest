@@ -15,35 +15,33 @@ var operationTestTimes = struct {
 }{}
 
 func testMatrixOperations(operationsTestMatrix [][]*TestData) {
-	var maxWallet float64
+	var globalMaxWallet = 0.0
 	for _, testDataSlice := range operationsTestMatrix {
-		testSliceOfOperations(0, len(testDataSlice), testDataSlice, []Strategy{}, &maxWallet)
+		testSliceOfOperations(0, len(testDataSlice), testDataSlice, []Strategy{}, &globalMaxWallet)
 	}
 }
 
-func testSliceOfOperations(i, l int, testDataSlice []*TestData, operationParameters []Strategy, maxWallet *float64) {
+func testSliceOfOperations(i, l int, testDataSlice []*TestData, operationParameters []Strategy, globalMaxWallet *float64) {
 	testData := testDataSlice[i]
 	if i == l-1 {
 		parallel(0, len(testData.TotalStrategies), func(ys <-chan int) {
 			for y := range ys {
-				testOperations(append(operationParameters, testData.TotalStrategies[y]), maxWallet)
+				testOperations(append(operationParameters, testData.TotalStrategies[y]), globalMaxWallet)
 			}
 		})
 		return
 	} else {
 		for _, op := range testData.TotalStrategies {
-			testSliceOfOperations(i+1, l, testDataSlice, append(operationParameters, op), maxWallet)
+			testSliceOfOperations(i+1, l, testDataSlice, append(operationParameters, op), globalMaxWallet)
 		}
 	}
 }
 
-func testOperations(strategies []Strategy, maxWallet *float64) {
+func testOperations(strategies []Strategy, globalMaxWallet *float64) {
 	wallet := StartDeposit
-	rnOpen := 0
-	rnSum := 0
-	openedCnt := 0.0
-	cnt := 0
-	cl := 0
+	maxWallet := StartDeposit
+	rnOpen, rnSum, cnt, cl := 0, 0, 0, 0
+	openedCnt, maxLoss := 0.0, 0.0
 	show := false
 	var openedPrice float64
 
@@ -78,6 +76,10 @@ func testOperations(strategies []Strategy, maxWallet *float64) {
 				if 10000*o/openedPrice >= float64(10000+cl) {
 					wallet += o * openedCnt * Commission
 
+					if wallet > maxWallet {
+						maxWallet = wallet
+					}
+
 					cl = 0
 					openedCnt = 0
 					cnt++
@@ -86,20 +88,28 @@ func testOperations(strategies []Strategy, maxWallet *float64) {
 			}
 		}
 
+		if openedCnt != 0 {
+			l := candleData.Candles[L][i]
+			loss := 1 - l*openedCnt/maxWallet
+			if loss > maxLoss {
+				maxLoss = loss
+			}
+		}
 	}
 
 	if openedCnt >= 1 {
 		wallet += openedPrice * openedCnt
 	}
 
-	if wallet > *maxWallet {
-		*maxWallet = wallet
+	if wallet > *globalMaxWallet {
+		*globalMaxWallet = wallet
 		show = true
 	}
 
 	if show {
-		fmt.Printf("\n %s %s %s %s",
+		fmt.Printf("\n %s %s %s %s %s",
 			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
+			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
 			color.New(color.BgBlue).Sprintf("cnt:%4d", cnt),
 			color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
 			showOperations(strategies),
