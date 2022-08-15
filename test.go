@@ -30,7 +30,7 @@ type TestData struct {
 }
 
 var TestBarTypes = []BarType{
-	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, //O, C, H, L,
+	LOC, LOH, LCH, OCH /*, LO, LC, LH, OC, OH, CH*/, O, C, H, L,
 }
 
 func initTestData(pair string) *TestData {
@@ -88,11 +88,9 @@ func (candleData *CandleData) parallelTestPair() {
 	currentTime := time.Now().Unix()
 	parallel(0, 50, func(ys <-chan int) {
 		for y := range ys {
-			//candleData.testPair(&globalMaxSpeed, &globalMaxWallet, &globalMaxSafety, 183+y, testData)
 			candleData.testPair(&globalMaxSpeed, &globalMaxWallet, &globalMaxSafety, y*25, testData)
 		}
 	})
-	//candleData.testPair(&globalMaxSpeed, &globalMaxWallet, 184, testData)
 	fmt.Println(time.Now().Unix() - currentTime)
 
 	testData.backup()

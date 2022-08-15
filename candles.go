@@ -404,10 +404,5 @@ func (candleData *CandleData) getIndicatorValue(indicator Indicator) []float64 {
 }
 
 func (candleData *CandleData) getIndicatorRatio(strategy Strategy, index int) float64 {
-	a := candleData.getIndicatorValue(strategy.Ind1)
-	b := candleData.getIndicatorValue(strategy.Ind2)
-	if a == nil || b == nil {
-		fmt.Println(a, b)
-	}
-	return a[index] / b[index]
+	return candleData.getIndicatorValue(strategy.Ind1)[index] / candleData.getIndicatorValue(strategy.Ind2)[index]
 }

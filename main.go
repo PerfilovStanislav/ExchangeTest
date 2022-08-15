@@ -70,17 +70,6 @@ func main() {
 
 	fmt.Println("!")
 
-	////tinkoff.Open("BBG000B9XRY4", 2)
-	////tinkoff.Close("BBG000B9XRY4", 2)
-	////ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
-	////defer cancel()
-	////p, _ := tinkoff.ApiClient.Portfolio(ctx, tinkoff.Account.ID)
-	////fmt.Printf("%+v", p)
-	//
-	////listenCandles(tinkoff)
-	//
-	//select {}
-
 }
 
 func testPairs(envTestPairs string) {
