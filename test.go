@@ -100,7 +100,7 @@ func (candleData *CandleData) parallelTestPair() {
 
 func (candleData *CandleData) testPair(globalMaxSpeed, globalMaxWallet, globalMaxSafety *float64, cl int, testData *TestData) {
 	for _, barType1 := range TestBarTypes {
-		for op := 20; op < 25; op += 5 {
+		for op := 0; op < 60; op += 5 {
 			for _, barType2 := range TestBarTypes {
 				for _, indicatorType1 := range IndicatorTypes {
 					indicators1 := candleData.Indicators[indicatorType1]
