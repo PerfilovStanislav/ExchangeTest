@@ -16,33 +16,34 @@ var operationTestTimes = struct {
 
 func testMatrixOperations(operationsTestMatrix [][]*TestData) {
 	var globalMaxWallet = 0.0
+	var globalMaxSafety = 0.0
+
 	for _, testDataSlice := range operationsTestMatrix {
-		testSliceOfOperations(0, len(testDataSlice), testDataSlice, []Strategy{}, &globalMaxWallet)
+		testSliceOfOperations(0, len(testDataSlice), testDataSlice, []Strategy{}, &globalMaxWallet, &globalMaxSafety)
 	}
 }
 
-func testSliceOfOperations(i, l int, testDataSlice []*TestData, operationParameters []Strategy, globalMaxWallet *float64) {
+func testSliceOfOperations(i, l int, testDataSlice []*TestData, operationParameters []Strategy, globalMaxWallet, globalMaxSafety *float64) {
 	testData := testDataSlice[i]
 	if i == l-1 {
 		parallel(0, len(testData.TotalStrategies), func(ys <-chan int) {
 			for y := range ys {
-				testOperations(append(operationParameters, testData.TotalStrategies[y]), globalMaxWallet)
+				testOperations(append(operationParameters, testData.TotalStrategies[y]), globalMaxWallet, globalMaxSafety)
 			}
 		})
 		return
 	} else {
 		for _, op := range testData.TotalStrategies {
-			testSliceOfOperations(i+1, l, testDataSlice, append(operationParameters, op), globalMaxWallet)
+			testSliceOfOperations(i+1, l, testDataSlice, append(operationParameters, op), globalMaxWallet, globalMaxSafety)
 		}
 	}
 }
 
-func testOperations(strategies []Strategy, globalMaxWallet *float64) {
+func testOperations(strategies []Strategy, globalMaxWallet, globalMaxSafety *float64) {
 	wallet := StartDeposit
 	maxWallet := StartDeposit
-	rnOpen, rnSum, cnt, cl := 0, 0, 0, 0
+	rnOpen, rnSum, cnt, cl, saveOperation := 0, 0, 0, 0, 0
 	openedCnt, maxLoss := 0.0, 0.0
-	show := false
 	var openedPrice float64
 
 	var candleData *CandleData
@@ -103,11 +104,18 @@ func testOperations(strategies []Strategy, globalMaxWallet *float64) {
 
 	if wallet > *globalMaxWallet {
 		*globalMaxWallet = wallet
-		show = true
+		saveOperation += 1
 	}
 
-	if show {
-		fmt.Printf("\n %s %s %s %s %s",
+	safety := wallet / maxLoss
+	if safety > *globalMaxSafety {
+		*globalMaxSafety = safety
+		saveOperation += 4
+	}
+
+	if saveOperation > 0 {
+		fmt.Printf("\n %d %s %s %s %s %s",
+			saveOperation,
 			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
 			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
 			color.New(color.BgBlue).Sprintf("cnt:%4d", cnt),
@@ -115,6 +123,4 @@ func testOperations(strategies []Strategy, globalMaxWallet *float64) {
 			showOperations(strategies),
 		)
 	}
-
-	show = false
 }

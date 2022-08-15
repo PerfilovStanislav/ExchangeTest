@@ -74,8 +74,8 @@ func main() {
 
 func testPairs(envTestPairs string) {
 	var sliceTestData []*TestData
-	envTestOperationPairs := strings.Split(envTestPairs, ";")
-	for _, pair := range envTestOperationPairs {
+	pairs := strings.Split(envTestPairs, ";")
+	for _, pair := range pairs {
 		candleData := getCandleData(pair)
 		apiHandler.downloadPairCandles(candleData)
 
