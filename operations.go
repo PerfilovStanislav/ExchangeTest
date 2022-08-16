@@ -92,6 +92,9 @@ func testOperations(strategies []Strategy, globalMaxWallet, globalMaxSafety *flo
 		if openedCnt != 0 {
 			l := candleData.Candles[L][i]
 			loss := 1 - l*openedCnt/maxWallet
+			if loss > 0.15 {
+				return
+			}
 			if loss > maxLoss {
 				maxLoss = loss
 			}

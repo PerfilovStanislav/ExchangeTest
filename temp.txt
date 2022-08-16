@@ -1,0 +1,1 @@
+{ ETC_USDT  30 250 |  4 LOC 46 |  5 LOH 26 }{ ETC_USDT  40 175 |  8  LO 23 |  6  LO 39 }{ ETC_USDT   0 200 |  3 LOC 14 |  3  CH 14 }{ ETC_USDT   0  25 |  7 LOC 47 |  7 LCH 46 }
