@@ -30,7 +30,7 @@ type TestData struct {
 }
 
 var TestBarTypes = []BarType{
-	LOC, LOH, LCH, OCH /*, LO, LC, LH, OC, OH, CH*/, O, C, H, L,
+	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, //O, C, H, L,
 }
 
 func initTestData(pair string) *TestData {
