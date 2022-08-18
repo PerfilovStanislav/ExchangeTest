@@ -114,7 +114,7 @@ const (
 	IndicatorType2Tema
 )
 
-var IndicatorTypes = [11]IndicatorType{
+var IndicatorTypes = []IndicatorType{
 	IndicatorTypeSma, IndicatorTypeEma, IndicatorTypeDema, IndicatorTypeTema, IndicatorTypeTemaZero, IndicatorType2Ema,
 	IndicatorType3Ema, IndicatorTypeEmaTema, IndicatorType2EmaTema, IndicatorType3EmaTema, IndicatorType2Tema,
 }

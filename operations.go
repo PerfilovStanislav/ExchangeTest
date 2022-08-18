@@ -48,26 +48,23 @@ func testOperations(strategies []Strategy, globalMaxWallet, globalMaxSafety *flo
 
 	var candleData *CandleData
 
-	for i, t := range operationTestTimes.totalTimes[1:] {
-		if i == 0 {
-			continue
-		}
+	for _, t := range operationTestTimes.totalTimes[1:] {
+		//if i == 0 {
+		//	continue
+		//}
 
 		if openedCnt == 0 {
 			for _, strategy := range strategies {
 				candleData = getCandleData(strategy.Pair)
 				index := operationTestTimes.indexes[strategy.Pair][t]
-				if index > 0 {
-					x := 10000 * candleData.getIndicatorRatio(strategy, index-1)
-					if x >= float64(10000+strategy.Op) {
-						cl = strategy.Cl
+				if index > 0 && 10000*candleData.getIndicatorRatio(strategy, index-1)/float64(10000+strategy.Op) >= 1.0 {
+					cl = strategy.Cl
 
-						openedPrice = candleData.Candles[O][index]
-						openedCnt = wallet / openedPrice
-						wallet -= openedPrice * openedCnt
-						rnOpen = index
-						break
-					}
+					openedPrice = candleData.Candles[O][index]
+					openedCnt = wallet / openedPrice
+					wallet -= openedPrice * openedCnt
+					rnOpen = index
+					break
 				}
 			}
 		} else {
@@ -90,9 +87,10 @@ func testOperations(strategies []Strategy, globalMaxWallet, globalMaxSafety *flo
 		}
 
 		if openedCnt != 0 {
-			l := candleData.Candles[L][i]
+			index := operationTestTimes.indexes[candleData.Pair][t]
+			l := candleData.Candles[L][index]
 			loss := 1 - l*openedCnt/maxWallet
-			if loss > 0.15 {
+			if loss > 0.18 {
 				return
 			}
 			if loss > maxLoss {
