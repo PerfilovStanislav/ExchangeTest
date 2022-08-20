@@ -138,17 +138,17 @@ func getRightCurrency(pair string) Currency {
 	return currency
 }
 
-func getUniqueStrategies(operations []Strategy) []Strategy {
-	var uniqueOperations []Strategy
+func getUniqueStrategies(strategies []Strategy) []Strategy {
+	var uniqueStrategies []Strategy
 	var symbols []string
-	for _, operation := range operations {
-		pair := operation.Pair
+	for _, strategy := range strategies {
+		pair := strategy.Pair
 		if sliceIndex(symbols, pair) == -1 {
 			symbols = append(symbols, pair)
-			uniqueOperations = append(uniqueOperations, operation)
+			uniqueStrategies = append(uniqueStrategies, strategy)
 		}
 	}
-	return uniqueOperations
+	return uniqueStrategies
 }
 
 func sliceIndex[E comparable](s []E, v E) int {

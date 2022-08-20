@@ -52,7 +52,7 @@ func main() {
 	envTestStrategies := os.Getenv("testStrategies")
 
 	CandleStorage = make(map[string]CandleData)
-	TestStorage = make(map[string]TestData)
+	FavoriteStrategyStorage = make(map[string]FavoriteStrategies)
 
 	if envTestPair != "" {
 		candleData := getCandleData(envTestPair)
@@ -61,19 +61,19 @@ func main() {
 	}
 
 	if envTestPairs != "" {
-		testPairs(envTestPairs)
+		prepareTestPairs(envTestPairs)
 	}
 
 	if envTestStrategies != "" {
-		testStrategies(envTestStrategies)
+		prepareTestStrategies(envTestStrategies)
 	}
 
 	fmt.Println("!")
 
 }
 
-func testPairs(envTestPairs string) {
-	var sliceTestData []*TestData
+func prepareTestPairs(envTestPairs string) {
+	var sliceTestData []*FavoriteStrategies
 	pairs := strings.Split(envTestPairs, ";")
 	for _, pair := range pairs {
 		candleData := getCandleData(pair)
@@ -87,17 +87,17 @@ func testPairs(envTestPairs string) {
 		testData.saveToStorage()
 		sliceTestData = append(sliceTestData, testData)
 	}
-	fillOperationTestTimes(sliceTestData)
+	fillStrategyTestTimes(sliceTestData)
 	HeapPermutation(sliceTestData, len(sliceTestData))
-	testMatrixOperations(operationsTestMatrix)
+	testMatrixStrategies(strategiesTestMatrix)
 }
 
-func testStrategies(envTestStrategies string) {
+func prepareTestStrategies(envTestStrategies string) {
 	params := strings.Split(envTestStrategies, "}{")
 	params[0] = params[0][1:]
 	params[len(params)-1] = params[len(params)-1][:len(params[len(params)-1])-1]
 
-	var sliceTestData []*TestData
+	var sliceTestData []*FavoriteStrategies
 	var strategies []Strategy
 	for _, param := range params {
 		strategy := getStrategy(param)
@@ -110,62 +110,62 @@ func testStrategies(envTestStrategies string) {
 		candleData := strategy.getCandleData()
 		apiHandler.downloadPairCandles(candleData)
 	}
-	fillOperationTestTimes(sliceTestData)
+	fillStrategyTestTimes(sliceTestData)
 	HeapPermutation(sliceTestData, len(sliceTestData))
-	testMatrixOperations(operationsTestMatrix)
+	testMatrixStrategies(strategiesTestMatrix)
 }
 
-func fillOperationTestTimes(operationsForTest []*TestData) {
-	for _, testData := range operationsForTest {
+func fillStrategyTestTimes(sliceFavoriteStrategies []*FavoriteStrategies) {
+	for _, testData := range sliceFavoriteStrategies {
 		testData.TotalStrategies = append(testData.StrategiesMaxSpeed, testData.StrategiesMaxWallet...)
 		testData.TotalStrategies = append(testData.TotalStrategies, testData.StrategiesMaxSafety...)
 		testData.CandleData = getCandleData(testData.Pair)
 	}
 
-	candleDataSlice := make([]*CandleData, len(operationsForTest), len(operationsForTest))
+	candleDataSlice := make([]*CandleData, len(sliceFavoriteStrategies), len(sliceFavoriteStrategies))
 
-	for i, testData := range operationsForTest {
+	for i, testData := range sliceFavoriteStrategies {
 		candleDataSlice[i] = getCandleData(testData.Pair)
 	}
 
 	totalTimeMap := make(map[time.Time]bool)
-	operationTestTimes.exist = make(map[string]map[time.Time]bool)
+	strategyTestTimes.exist = make(map[string]map[time.Time]bool)
 	for _, candleData := range candleDataSlice {
-		operationTestTimes.exist[candleData.Pair] = timeSlicesToMap(candleData.Time)
-		totalTimeMap = mergeTimeMaps(totalTimeMap, operationTestTimes.exist[candleData.Pair])
+		strategyTestTimes.exist[candleData.Pair] = timeSlicesToMap(candleData.Time)
+		totalTimeMap = mergeTimeMaps(totalTimeMap, strategyTestTimes.exist[candleData.Pair])
 	}
 
 	totalTimeSlices := timeMapToSlices(totalTimeMap)
 	sort.Slice(totalTimeSlices, func(i, j int) bool {
 		return totalTimeSlices[i].Before(totalTimeSlices[j])
 	})
-	operationTestTimes.totalTimes = totalTimeSlices
+	strategyTestTimes.totalTimes = totalTimeSlices
 
 	for t, _ := range totalTimeMap {
 		totalTimeMap[t] = false
 	}
-	for data, m := range operationTestTimes.exist {
-		operationTestTimes.exist[data] = mergeTimeMaps(totalTimeMap, m)
+	for data, m := range strategyTestTimes.exist {
+		strategyTestTimes.exist[data] = mergeTimeMaps(totalTimeMap, m)
 	}
 
-	operationTestTimes.indexes = make(map[string]map[time.Time]int)
+	strategyTestTimes.indexes = make(map[string]map[time.Time]int)
 	for _, candleData := range candleDataSlice {
-		operationTestTimes.indexes[candleData.Pair] = make(map[time.Time]int)
+		strategyTestTimes.indexes[candleData.Pair] = make(map[time.Time]int)
 		j := -1
-		for _, t := range operationTestTimes.totalTimes {
-			if operationTestTimes.exist[candleData.Pair][t] {
+		for _, t := range strategyTestTimes.totalTimes {
+			if strategyTestTimes.exist[candleData.Pair][t] {
 				j++
-				operationTestTimes.indexes[candleData.Pair][t] = j
+				strategyTestTimes.indexes[candleData.Pair][t] = j
 			} else {
-				operationTestTimes.indexes[candleData.Pair][t] = -1
+				strategyTestTimes.indexes[candleData.Pair][t] = -1
 			}
 		}
 	}
 }
 
-func HeapPermutation(a []*TestData, size int) {
+func HeapPermutation(a []*FavoriteStrategies, size int) {
 	if size == 1 {
-		operationsTestMatrix = append(operationsTestMatrix, append(make([]*TestData, 0, len(a)), a...))
+		strategiesTestMatrix = append(strategiesTestMatrix, append(make([]*FavoriteStrategies, 0, len(a)), a...))
 	}
 
 	for i := 0; i < size; i++ {

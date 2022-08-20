@@ -349,8 +349,8 @@ type Indicator struct {
 	Coef          int
 }
 
-func (operation Strategy) getCandleData() *CandleData {
-	return getCandleData(operation.Pair)
+func (strategy Strategy) getCandleData() *CandleData {
+	return getCandleData(strategy.Pair)
 }
 
 func (indicatorType IndicatorType) getFunction(data *CandleData) funGet {
@@ -373,21 +373,21 @@ func (indicator Indicator) getValue(data *CandleData, i int) float64 {
 	return indicator.IndicatorType.getFunction(data)(indicator.Coef, i, indicator.BarType)
 }
 
-func showOperations(operations []Strategy) string {
+func showStrategies(strategies []Strategy) string {
 	var str string
-	for _, operation := range operations {
-		str += operation.String()
+	for _, strategy := range strategies {
+		str += strategy.String()
 	}
 	return str
 }
 
-func (operation Strategy) String() string {
+func (strategy Strategy) String() string {
 	return fmt.Sprintf("{ %s %s %s | %s | %s }",
-		color.New(color.FgBlue).Sprintf("%s", operation.Pair),
-		color.New(color.BgHiGreen, color.FgBlack).Sprintf("%3d", operation.Op),
-		color.New(color.BgHiRed, color.FgBlack).Sprintf("%3d", operation.Cl),
-		operation.Ind1.String(),
-		operation.Ind2.String(),
+		color.New(color.FgBlue).Sprintf("%s", strategy.Pair),
+		color.New(color.BgHiGreen, color.FgBlack).Sprintf("%3d", strategy.Op),
+		color.New(color.BgHiRed, color.FgBlack).Sprintf("%3d", strategy.Cl),
+		strategy.Ind1.String(),
+		strategy.Ind2.String(),
 	)
 }
 
