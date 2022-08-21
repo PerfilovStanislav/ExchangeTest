@@ -8,11 +8,13 @@ import (
 
 var strategiesTestMatrix [][]*FavoriteStrategies
 
-var strategyTestTimes = struct {
+type StrategyTestTimes struct {
 	totalTimes []time.Time
 	exist      map[string]map[time.Time]bool
 	indexes    map[string]map[time.Time]int
-}{}
+}
+
+var strategyTestTimes StrategyTestTimes
 
 func testMatrixStrategies(strategiesTestMatrix [][]*FavoriteStrategies) {
 	var globalMaxWallet = 0.0
@@ -28,7 +30,7 @@ func testSliceOfStrategies(i, l int, testDataSlice []*FavoriteStrategies, strate
 	if i == l-1 {
 		parallel(0, len(testData.TotalStrategies), func(ys <-chan int) {
 			for y := range ys {
-				testStrategies(append(strategies, testData.TotalStrategies[y]), globalMaxWallet, globalMaxSafety)
+				testStrategies(strategyTestTimes, append(strategies, testData.TotalStrategies[y]), globalMaxWallet, globalMaxSafety)
 			}
 		})
 		return
@@ -39,7 +41,7 @@ func testSliceOfStrategies(i, l int, testDataSlice []*FavoriteStrategies, strate
 	}
 }
 
-func testStrategies(strategies []Strategy, globalMaxWallet, globalMaxSafety *float64) {
+func testStrategies(times StrategyTestTimes, strategies []Strategy, globalMaxWallet, globalMaxSafety *float64) {
 	wallet := StartDeposit
 	maxWallet := StartDeposit
 	rnOpen, rnSum, cnt, cl, saveStrategy := 0, 0, 0, 0, 0
@@ -48,7 +50,7 @@ func testStrategies(strategies []Strategy, globalMaxWallet, globalMaxSafety *flo
 
 	var candleData *CandleData
 
-	for _, t := range strategyTestTimes.totalTimes[1:] {
+	for _, t := range times.totalTimes[1:] {
 		//if i == 0 {
 		//	continue
 		//}
@@ -56,11 +58,11 @@ func testStrategies(strategies []Strategy, globalMaxWallet, globalMaxSafety *flo
 		if openedCnt == 0 {
 			for _, strategy := range strategies {
 				candleData = getCandleData(strategy.Pair)
-				index := strategyTestTimes.indexes[strategy.Pair][t]
+				index := times.indexes[strategy.Pair][t]
 				if index > 0 && 10000*candleData.getIndicatorRatio(strategy, index-1)/float64(10000+strategy.Op) >= 1.0 {
 					cl = strategy.Cl
 
-					openedPrice = candleData.Candles[O][index]
+					openedPrice = candleData.getCandle(0, index, O)
 					openedCnt = wallet / openedPrice
 					wallet -= openedPrice * openedCnt
 					rnOpen = index
@@ -68,9 +70,9 @@ func testStrategies(strategies []Strategy, globalMaxWallet, globalMaxSafety *flo
 				}
 			}
 		} else {
-			index := strategyTestTimes.indexes[candleData.Pair][t]
+			index := times.indexes[candleData.Pair][t]
 			if index > 0 {
-				o := candleData.Candles[O][index]
+				o := candleData.getCandle(0, index, O)
 				if 10000*o/openedPrice >= float64(10000+cl) {
 					wallet += o * openedCnt * Commission
 
@@ -87,8 +89,8 @@ func testStrategies(strategies []Strategy, globalMaxWallet, globalMaxSafety *flo
 		}
 
 		if openedCnt != 0 {
-			index := strategyTestTimes.indexes[candleData.Pair][t]
-			l := candleData.Candles[L][index]
+			index := times.indexes[candleData.Pair][t]
+			l := candleData.getCandle(0, index, L)
 			loss := 1 - l*openedCnt/maxWallet
 			if loss > 0.18 {
 				return
