@@ -109,7 +109,7 @@ func (candleData *CandleData) testPair(globalMaxSpeed, globalMaxWallet, globalMa
 							for coef2 := range indicators2 {
 								wallet := StartDeposit
 								maxWallet := StartDeposit
-								maxLoss, openedCnt, speed, openedPrice := 0.0, 0.0, 0.0, 0.0
+								maxLoss, openedCnt, speed, openedPrice, addedMoney := 0.0, 0.0, 0.0, 0.0, 0.0
 								rnOpen, rnSum, cnt, saveStrategy := 0, 0, 0, 0
 
 								strategy := Strategy{
@@ -122,6 +122,7 @@ func (candleData *CandleData) testPair(globalMaxSpeed, globalMaxWallet, globalMa
 
 								for i, _ := range candleData.Time {
 									wallet += additionalMoney
+									addedMoney += additionalMoney
 									if i == 0 {
 										continue
 									}
@@ -138,8 +139,8 @@ func (candleData *CandleData) testPair(globalMaxSpeed, globalMaxWallet, globalMa
 										if 10000*o/openedPrice >= float64(10000+cl) {
 											wallet += o * openedCnt * Commission
 
-											if wallet > maxWallet {
-												maxWallet = wallet
+											if wallet-addedMoney > maxWallet {
+												maxWallet = wallet - addedMoney
 											}
 
 											openedCnt = 0.0
@@ -161,7 +162,7 @@ func (candleData *CandleData) testPair(globalMaxSpeed, globalMaxWallet, globalMa
 
 								}
 
-								wallet -= float64(len(candleData.Time)) * additionalMoney
+								wallet -= addedMoney
 
 								if openedCnt >= 1 {
 									wallet += openedPrice * openedCnt

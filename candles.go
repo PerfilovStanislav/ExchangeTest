@@ -354,19 +354,19 @@ func (strategy Strategy) getCandleData() *CandleData {
 }
 
 func (indicatorType IndicatorType) getFunction(data *CandleData) funGet {
-	switch indicatorType {
-	case IndicatorTypeSma:
-		return data.getSma
-	case IndicatorTypeEma:
-		return data.getEma
-	case IndicatorTypeDema:
-		return data.getDema
-	case IndicatorTypeTema:
-		return data.getTema
-	case IndicatorTypeTemaZero:
-		return data.getTemaZero
-	}
-	return nil
+	return map[IndicatorType]funGet{
+		IndicatorTypeSma:      data.getSma,
+		IndicatorTypeEma:      data.getEma,
+		IndicatorTypeDema:     data.getDema,
+		IndicatorTypeTema:     data.getTema,
+		IndicatorTypeTemaZero: data.getTemaZero,
+		IndicatorType2Ema:     data.get2Ema,
+		IndicatorType3Ema:     data.get3Ema,
+		IndicatorTypeEmaTema:  data.getEmaTema,
+		IndicatorType2EmaTema: data.get2EmaTema,
+		IndicatorType3EmaTema: data.get3EmaTema,
+		IndicatorType2Tema:    data.get2Tema,
+	}[indicatorType]
 }
 
 func (indicator Indicator) getValue(data *CandleData, i int) float64 {
