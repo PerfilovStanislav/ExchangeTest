@@ -26,3 +26,39 @@
  5  3281% 33.1% cnt:  59  3357 { ETC_USDT  55 675 |  8  OC 38 |  8  OH 48 }{ ETC_USDT  45 325 |  8 LCH 39 | 10 LCH 69 }{ ETC_USDT  45 700 | 10  LO 47 |  9 LOC 33 }
 
  { ETC_USDT   0 225 |  3 LOC 13 |  3  CH 13 }{ ETC_USDT  15  75 |  9 LOC 54 | 10 LOC 65 }{ ETC_USDT  45 700 | 10  LO 47 |  9 LOC 33 }
+
+
+
+
+
+
+
+  4   120%  0.7% cnt:  71   745 { ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT   0 200 |  9 LOC  5 |  7  OH  7 }
+  4    15%  1.5% cnt:  80   525 { ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT   0  75 |  6 LOC 34 |  6 LCH 33 }
+  4    47%  0.0% cnt:  79   583 { ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT   0 150 |  9 LOC 61 |  7 OCH 70 }
+  1  1027% 31.4% cnt:  81  2431 { ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT   5 100 |  5 LOC 37 |  5 LOC 36 }{ ETC_USDT  30 550 |  2 LOH 11 |  2 LCH 10 }
+  1  1141% 27.1% cnt:  88  2610 { ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT   5 100 |  5 LOC 37 |  5 LOC 36 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
+  1  1180% 27.4% cnt:  89  2627 { ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT   5 100 |  5 LOC 36 |  5 LOC 35 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
+  1  1182% 26.6% cnt:  76  2523 { ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT  25  75 |  8  LC 32 |  9  LC 50 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
+  1  1198% 27.4% cnt:  66  2697 { ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT  25 425 |  8 LOC 49 |  2  OC 44 }{ ETC_USDT  30 550 |  2 LOH 11 |  2 LCH 10 }
+  1  1287% 27.9% cnt:  66  2702 { ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT  25 425 |  8 LOC 49 |  2  OC 44 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
+  1  1317% 27.6% cnt:  80  2721 { ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }{ ETC_USDT   5 100 |  5 LOC 37 |  5 LOC 36 }
+  1  1362% 27.9% cnt:  81  2738 { ETC_USDT   0 100 |  1 LOC 66 |  1 LCH 68 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }{ ETC_USDT   5 100 |  5 LOC 36 |  5 LOC 35 }
+  1  1384% 27.1% cnt:  86  2741 { ETC_USDT   0  75 |  6 LOC 34 |  6 LCH 33 }{ ETC_USDT   5 100 |  5 LOC 36 |  5 LOC 35 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
+  1  1419% 30.8% cnt:  63  3237 { ETC_USDT   0  75 |  6 LOC 34 |  6 LCH 33 }{ ETC_USDT  45 550 |  1 LOC 22 |  7 LCH 20 }{ ETC_USDT  50 550 |  3  OC 56 |  5  OC 26 }
+  1  1460% 30.9% cnt:  62  3297 { ETC_USDT   0  75 |  6 LOC 34 |  6 LCH 33 }{ ETC_USDT  45 575 |  1 LOC 22 |  7 LCH 20 }{ ETC_USDT  50 550 |  3  OC 56 |  5  OC 26 }
+  1  1463% 30.9% cnt:  68  3296 { ETC_USDT   0  50 |  7 LOC 46 |  7 LCH 45 }{ ETC_USDT  45 550 |  1 LOC 22 |  7 LCH 20 }{ ETC_USDT  50 550 |  3  OC 56 |  5  OC 26 }
+  1  1505% 31.1% cnt:  67  3356 { ETC_USDT   0  50 |  7 LOC 46 |  7 LCH 45 }{ ETC_USDT  45 575 |  1 LOC 22 |  7 LCH 20 }{ ETC_USDT  50 550 |  3  OC 56 |  5  OC 26 }
+  1  1527% 31.1% cnt:  67  3358 { ETC_USDT   0  75 |  7 LOC 46 |  7 LCH 45 }{ ETC_USDT  45 575 |  1 LOC 22 |  7 LCH 20 }{ ETC_USDT  50 550 |  3  OC 56 |  5  OC 26 }
+  1  1560% 31.1% cnt:  66  3359 { ETC_USDT   0 100 |  7 LOC 46 |  7 LCH 45 }{ ETC_USDT  45 575 |  1 LOC 22 |  7 LCH 20 }{ ETC_USDT  50 550 |  3  OC 56 |  5  OC 26 }
+  1  1663% 26.8% cnt:  76  2823 { ETC_USDT   0 200 |  3 LOC 15 |  3 OCH 15 }{ ETC_USDT  25  75 |  8  LC 32 |  9  LC 50 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
+  1  1719% 27.8% cnt:  84  2740 { ETC_USDT   0 150 |  9 LOC 61 |  7 OCH 70 }{ ETC_USDT   5 100 |  5 LOC 37 |  5 LOC 36 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
+  1  1778% 28.1% cnt:  85  2757 { ETC_USDT   0 150 |  9 LOC 61 |  7 OCH 70 }{ ETC_USDT   5 100 |  5 LOC 36 |  5 LOC 35 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
+  1  1785% 28.1% cnt:  84  2786 { ETC_USDT   0 150 |  9 LOC 61 |  7 OCH 70 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }{ ETC_USDT   5 100 |  5 LOC 36 |  5 LOC 35 }
+  1  1812% 28.0% cnt:  84  2784 { ETC_USDT   0 200 |  3 LOC 13 |  3  CH 13 }{ ETC_USDT   5 100 |  5 LOC 36 |  5 LOC 35 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
+  1  1819% 28.0% cnt:  83  2813 { ETC_USDT   0 200 |  3 LOC 13 |  3  CH 13 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }{ ETC_USDT   5 100 |  5 LOC 36 |  5 LOC 35 }
+  1  1933% 28.3% cnt:  77  2692 { ETC_USDT   5 100 |  5 LOC 37 |  5 LOC 36 }{ ETC_USDT  25 425 |  8 LOC 49 |  2  OC 44 }{ ETC_USDT  30 550 |  2 LOH 11 |  2 LCH 10 }
+  1  2092% 28.7% cnt:  78  2667 { ETC_USDT   5 100 |  5 LOC 37 |  5 LOC 36 }{ ETC_USDT  25 425 |  8 LOC 49 |  2  OC 44 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
+  1  2206% 29.0% cnt:  80  2686 { ETC_USDT   5 100 |  5 LOC 36 |  5 LOC 35 }{ ETC_USDT  25 425 |  8 LOC 49 |  2  OC 44 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
+  1  2607% 29.1% cnt:  75  2690 { ETC_USDT  30  75 |  8 LOC 33 |  9 LOC 52 }{ ETC_USDT  25 425 |  8 LOC 49 |  2  OC 44 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
+  1  2626% 29.2% cnt:  72  2689 { ETC_USDT  40 175 |  8  LO 23 |  6  LO 39 }{ ETC_USDT  25 425 |  8 LOC 49 |  2  OC 44 }{ ETC_USDT  30 575 |  2 LOH 11 |  2 LCH 10 }
