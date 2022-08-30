@@ -151,7 +151,7 @@ func (candleData *CandleData) testPair(globalMaxSpeed, globalMaxWallet, globalMa
 
 									if openedCnt != 0 {
 										l := candleData.Candles[L][i]
-										loss := 1 - l*openedCnt/maxWallet
+										loss := 1 - l*openedCnt/(maxWallet+addedMoney)
 										if loss > maxLoss {
 											maxLoss = loss
 											if maxLoss >= envMaxLoss {
