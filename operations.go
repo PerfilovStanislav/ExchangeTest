@@ -98,7 +98,7 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy, globalMaxWal
 				continue
 			}
 			l := candleData.getCandle(0, index, L)
-			loss := 1 - l*openedCnt/maxWallet
+			loss := 1 - l*openedCnt/(maxWallet+addedMoney)
 			if loss > 0.40 {
 				return
 			}
@@ -108,7 +108,7 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy, globalMaxWal
 		}
 	}
 
-	wallet -= float64(len(times.totalTimes)-1) * additionalMoney
+	wallet -= addedMoney
 
 	if openedCnt >= 1 {
 		wallet += openedPrice * openedCnt

@@ -68,7 +68,7 @@ func main() {
 		prepareTestStrategies(envTestStrategies)
 	}
 
-	fmt.Println("!")
+	fmt.Println("\nFINISHED")
 
 }
 
