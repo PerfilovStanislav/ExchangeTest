@@ -50,8 +50,10 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy, globalMaxWal
 
 	var candleData *CandleData
 
+	//month := time.Now().AddDate(0, -1, 0)
+
 	for _, t := range times.totalTimes[1:] {
-		//if i == 0 {
+		//if t.Before(month) {
 		//	continue
 		//}
 
