@@ -18,7 +18,7 @@ var envMinCnt int
 
 var envMaxLoss float64
 
-const additionalMoney = 4
+const additionalMoney = 15
 
 type FavoriteStrategies struct {
 	Pair                string
