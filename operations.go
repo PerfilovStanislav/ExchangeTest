@@ -45,7 +45,7 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy, globalMaxWal
 	wallet := StartDeposit
 	maxWallet := StartDeposit
 	rnOpen, rnSum, cnt, cl, saveStrategy := 0, 0, 0, 0, 0
-	openedCnt, maxLoss := 0.0, 0.0
+	openedCnt, maxLoss, addedMoney := 0.0, 0.0, 0.0
 	var openedPrice float64
 
 	var candleData *CandleData
@@ -53,6 +53,8 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy, globalMaxWal
 	//month := time.Now().AddDate(0, -1, 0)
 
 	for _, t := range times.totalTimes[1:] {
+		wallet += additionalMoney
+		addedMoney += additionalMoney
 		//if t.Before(month) {
 		//	continue
 		//}
@@ -78,8 +80,8 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy, globalMaxWal
 				if 10000*o/openedPrice >= float64(10000+cl) {
 					wallet += o * openedCnt * Commission
 
-					if wallet > maxWallet {
-						maxWallet = wallet
+					if wallet-addedMoney > maxWallet {
+						maxWallet = wallet - addedMoney
 					}
 
 					cl = 0
@@ -92,9 +94,12 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy, globalMaxWal
 
 		if openedCnt != 0 {
 			index := times.indexes[candleData.Pair][t]
+			if index == -1 {
+				continue
+			}
 			l := candleData.getCandle(0, index, L)
 			loss := 1 - l*openedCnt/maxWallet
-			if loss > 0.18 {
+			if loss > 0.40 {
 				return
 			}
 			if loss > maxLoss {
@@ -102,6 +107,8 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy, globalMaxWal
 			}
 		}
 	}
+
+	wallet -= float64(len(times.totalTimes)-1) * additionalMoney
 
 	if openedCnt >= 1 {
 		wallet += openedPrice * openedCnt
