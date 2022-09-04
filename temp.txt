@@ -73,3 +73,9 @@
  1  2236% 18.9% cnt: 102  4069 { XRP_USDT  20 350 |  5 LOC 24 |  4 LOH 55 }{ ADA_USDT  50 350 |  1  LH 64 |  1  LC 65 }{ ETC_USDT  35 275 |  4  CH 41 | 11  CH 52 }
  1  2259% 18.9% cnt:  98  3942 { XRP_USDT  20 350 |  5 LOC 24 |  4 LOH 55 }{ ADA_USDT  50 350 |  1  LH 64 |  1  LC 65 }{ ETC_USDT  35 275 |  4  LH 40 | 11  LH 51 }
  1  2308% 18.9% cnt:  99  4084 { XRP_USDT  20 375 |  5  OC 27 |  5  OH 46 }{ ADA_USDT  50 350 |  1  LH 64 |  1  LC 65 }{ ETC_USDT  35 275 |  4  CH 41 | 11  CH 52 }
+
+ 4  2034% 23.7% cnt:  92  3412 { ETC_USDT  45 375 |  8 LCH 12 | 10 LCH 29 }{ ADA_USDT  50 350 |  1  LH 64 |  1  LC 65 }{ XRP_USDT  20 375 |  5  OC 27 |  5  OH 46 }
+ 4  2085% 23.8% cnt:  97  3936 { ADA_USDT  50 350 |  1  LH 64 |  1  LC 65 }{ ETC_USDT  35 275 |  4  LH 40 | 11  LH 51 }{ XRP_USDT  20 350 |  5 LOC 24 |  4 LOH 55 }
+ 4  2116% 23.8% cnt:  98  4078 { ADA_USDT  50 350 |  1  LH 64 |  1  LC 65 }{ ETC_USDT  35 275 |  4  CH 41 | 11  CH 52 }{ XRP_USDT  20 375 |  5  OC 27 |  5  OH 46 }
+ 5  2259% 24.2% cnt:  98  3942 { XRP_USDT  20 350 |  5 LOC 24 |  4 LOH 55 }{ ADA_USDT  50 350 |  1  LH 64 |  1  LC 65 }{ ETC_USDT  35 275 |  4  LH 40 | 11  LH 51 }
+ 5  2308% 24.2% cnt:  99  4084 { XRP_USDT  20 375 |  5  OC 27 |  5  OH 46 }{ ADA_USDT  50 350 |  1  LH 64 |  1  LC 65 }{ ETC_USDT  35 275 |  4  CH 41 | 11  CH 52 }
