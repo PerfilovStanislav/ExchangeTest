@@ -90,7 +90,6 @@ func (candleData *CandleData) testPair() {
 	ready := make(chan bool, proc)
 
 	for i := 0; i < proc; i++ {
-		fmt.Printf("i:%d \n", i)
 		go func(tasks <-chan Strategy, ready chan bool) {
 			for strategy := range tasks {
 				candleData.testStrategy(strategy, testData)
