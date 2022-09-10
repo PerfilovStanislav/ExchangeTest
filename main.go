@@ -57,7 +57,7 @@ func main() {
 	if envTestPair != "" {
 		candleData := getCandleData(envTestPair)
 		apiHandler.downloadPairCandles(candleData)
-		candleData.parallelTestPair()
+		candleData.testPair()
 	}
 
 	if envTestPairs != "" {
@@ -81,7 +81,7 @@ func prepareTestPairs(envTestPairs string) {
 
 		testData := getTestData(pair)
 		if !testData.restore() {
-			candleData.parallelTestPair()
+			candleData.testPair()
 			testData.restore()
 		}
 		testData.saveToStorage()
