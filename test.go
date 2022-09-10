@@ -9,6 +9,7 @@ import (
 	_ "github.com/jackc/pgx/stdlib"
 	"io/ioutil"
 	"runtime"
+	"time"
 	//_ "github.com/lib/pq"
 )
 
@@ -89,10 +90,22 @@ func (candleData *CandleData) testPair() {
 	tasks := make(chan Strategy, 2000)
 	ready := make(chan bool, proc)
 
+	var monthAgoIndex int
+	monthAgo := time.Now().AddDate(0, -1, 0)
+	for i, t := range candleData.Time {
+		if t.After(monthAgo) {
+			monthAgoIndex = i
+			break
+		}
+	}
+	maxTimeIndex := candleData.index()
+
 	for i := 0; i < proc; i++ {
 		go func(tasks <-chan Strategy, ready chan bool) {
 			for strategy := range tasks {
-				candleData.testStrategy(strategy, testData)
+				if candleData.strategyHasEnoughCnt(strategy, monthAgoIndex, maxTimeIndex) {
+					candleData.testStrategy(strategy, testData, monthAgoIndex)
+				}
 			}
 			ready <- true
 		}(tasks, ready)
@@ -133,7 +146,31 @@ func (candleData *CandleData) testPair() {
 	testData.backup()
 }
 
-func (candleData *CandleData) testStrategy(strategy Strategy, testData *FavoriteStrategies) {
+func (candleData *CandleData) strategyHasEnoughCnt(strategy Strategy, monthStartIndex, maxTimeIndex int) bool {
+	cnt := 0
+	openedPrice := 0.0
+	open := false
+
+	for i := monthStartIndex; i < maxTimeIndex; i++ {
+		o := candleData.Candles[O][i]
+		if false == open {
+			if 10000*candleData.getIndicatorRatio(strategy, i-1) >= float64(10000+strategy.Op) {
+				openedPrice = o
+				open = true
+			}
+		} else {
+			if 10000*o/openedPrice >= float64(10000+strategy.Cl) {
+				if cnt++; cnt >= 2 {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+func (candleData *CandleData) testStrategy(strategy Strategy, testData *FavoriteStrategies, monthAgoIndex int) {
 	wallet := StartDeposit
 	maxWallet := StartDeposit
 	maxLoss, openedCnt, speed, openedPrice, addedMoney := 0.0, 0.0, 0.0, 0.0, 0.0
