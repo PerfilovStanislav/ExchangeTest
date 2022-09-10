@@ -86,7 +86,7 @@ func (candleData *CandleData) testPair() {
 	testData := getTestData(candleData.Pair)
 
 	proc := runtime.GOMAXPROCS(0)
-	tasks := make(chan Strategy, proc)
+	tasks := make(chan Strategy, 2000)
 	ready := make(chan bool, proc)
 
 	for i := 0; i < proc; i++ {
