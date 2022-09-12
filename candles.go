@@ -136,7 +136,7 @@ func getCandleData(pair string) *CandleData {
 }
 
 func (candleData *CandleData) restore() bool {
-	fileName := fmt.Sprintf("candles_%s.dat", candleData.Pair)
+	fileName := candleData.getFileName()
 	if !fileExists(fileName) {
 		return false
 	}
@@ -150,7 +150,11 @@ func (candleData *CandleData) restore() bool {
 
 func (candleData *CandleData) backup() {
 	dataOut := EncodeToBytes(candleData)
-	_ = ioutil.WriteFile(fmt.Sprintf("candles_%s.dat", candleData.Pair), dataOut, 0644)
+	_ = ioutil.WriteFile(candleData.getFileName(), dataOut, 0644)
+}
+
+func (candleData *CandleData) getFileName() string {
+	return fmt.Sprintf("candles_%s_%s.dat", candleData.Pair, resolution)
 }
 
 func (candleData *CandleData) save() {

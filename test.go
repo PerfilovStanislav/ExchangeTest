@@ -53,7 +53,7 @@ func getTestData(pair string) *FavoriteStrategies {
 }
 
 func (testData *FavoriteStrategies) restore() bool {
-	fileName := fmt.Sprintf("tests_%s.dat", testData.Pair)
+	fileName := testData.getFileName()
 	if !fileExists(fileName) {
 		return false
 	}
@@ -65,11 +65,15 @@ func (testData *FavoriteStrategies) restore() bool {
 }
 
 func (testData *FavoriteStrategies) backup() {
-	testData.StrategiesMaxSafety = testData.StrategiesMaxSafety[maxInt(len(testData.StrategiesMaxSafety)-40, 0):]
-	testData.StrategiesMaxWallet = testData.StrategiesMaxWallet[maxInt(len(testData.StrategiesMaxWallet)-40, 0):]
+	testData.StrategiesMaxSafety = testData.StrategiesMaxSafety[maxInt(len(testData.StrategiesMaxSafety)-50, 0):]
+	testData.StrategiesMaxWallet = testData.StrategiesMaxWallet[maxInt(len(testData.StrategiesMaxWallet)-50, 0):]
 	testData.StrategiesMaxSpeed = testData.StrategiesMaxSpeed[maxInt(len(testData.StrategiesMaxSpeed)-100, 0):]
 	dataOut := EncodeToBytes(testData)
-	_ = ioutil.WriteFile(fmt.Sprintf("tests_%s.dat", testData.Pair), dataOut, 0644)
+	_ = ioutil.WriteFile(testData.getFileName(), dataOut, 0644)
+}
+
+func (testData *FavoriteStrategies) getFileName() string {
+	return fmt.Sprintf("tests_%s_%s.dat", testData.Pair, resolution)
 }
 
 func (testData *FavoriteStrategies) saveToStorage() {
@@ -101,7 +105,7 @@ func (candleData *CandleData) testPair() {
 	maxTimeIndex := candleData.index()
 
 	for i := 0; i < proc; i++ {
-		go func(tasks <-chan Strategy, ready chan bool) {
+		go func(tasks <-chan Strategy, ready chan<- bool) {
 			for strategy := range tasks {
 				if candleData.strategyHasEnoughCnt(strategy, monthAgoIndex, maxTimeIndex) {
 					candleData.testStrategy(strategy, testData, monthAgoIndex)
@@ -119,14 +123,13 @@ func (candleData *CandleData) testPair() {
 						for coef2 := range candleData.Indicators[indicatorType2] {
 							for op := 0; op < 60; op += 4 {
 								for cl := 20; cl < 500; cl += 20 {
-									strategy := Strategy{
+									tasks <- Strategy{
 										candleData.Pair,
 										op,
 										Indicator{indicatorType1, barType1, coef1},
 										cl,
 										Indicator{indicatorType2, barType2, coef2},
 									}
-									tasks <- strategy
 								}
 							}
 						}
@@ -139,7 +142,6 @@ func (candleData *CandleData) testPair() {
 
 	for i := 0; i < proc; i++ {
 		<-ready
-		fmt.Println("XXX")
 	}
 	close(ready)
 
