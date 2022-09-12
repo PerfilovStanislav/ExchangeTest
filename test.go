@@ -15,7 +15,7 @@ import (
 
 var FavoriteStrategyStorage map[string]FavoriteStrategies
 
-var envMinCnt int
+var envMinCnt uint
 
 var envMaxLoss float64
 
@@ -87,6 +87,18 @@ func maxInt(x, y int) int {
 	return y
 }
 
+func (candleData *CandleData) getMonthIndex(month int) int {
+	monthAgo := time.Now().AddDate(0, -month, 0)
+
+	for i, t := range candleData.Time {
+		if t.After(monthAgo) {
+			return i
+		}
+	}
+
+	return candleData.index()
+}
+
 func (candleData *CandleData) testPair() {
 	testData := getTestData(candleData.Pair)
 
@@ -94,21 +106,17 @@ func (candleData *CandleData) testPair() {
 	tasks := make(chan Strategy, 2000)
 	ready := make(chan bool, proc)
 
-	var monthAgoIndex int
-	monthAgo := time.Now().AddDate(0, -1, 0)
-	for i, t := range candleData.Time {
-		if t.After(monthAgo) {
-			monthAgoIndex = i
-			break
-		}
-	}
+	oneMonthAgoIndex := candleData.getMonthIndex(1)
+	twoMonthsAgoIndex := candleData.getMonthIndex(2)
+	threeMonthsAgoIndex := candleData.getMonthIndex(3)
+	monthCntArray := [3]int{oneMonthAgoIndex, twoMonthsAgoIndex, threeMonthsAgoIndex}
 	maxTimeIndex := candleData.index()
 
 	for i := 0; i < proc; i++ {
 		go func(tasks <-chan Strategy, ready chan<- bool) {
 			for strategy := range tasks {
-				if candleData.strategyHasEnoughCnt(strategy, monthAgoIndex, maxTimeIndex) {
-					candleData.testStrategy(strategy, testData, monthAgoIndex)
+				if candleData.strategyHasEnoughCnt(strategy, oneMonthAgoIndex, maxTimeIndex) {
+					candleData.testStrategy(strategy, testData, monthCntArray)
 				}
 			}
 			ready <- true
@@ -172,11 +180,12 @@ func (candleData *CandleData) strategyHasEnoughCnt(strategy Strategy, monthStart
 	return false
 }
 
-func (candleData *CandleData) testStrategy(strategy Strategy, testData *FavoriteStrategies, monthAgoIndex int) {
-	wallet := StartDeposit
-	maxWallet := StartDeposit
+func (candleData *CandleData) testStrategy(strategy Strategy, testData *FavoriteStrategies, monthCntParams [3]int) {
+	wallet, maxWallet := StartDeposit, StartDeposit
 	maxLoss, openedCnt, speed, openedPrice, addedMoney := 0.0, 0.0, 0.0, 0.0, 0.0
-	rnOpen, rnSum, cnt, saveStrategy := 0, 0, 0, 0
+	rnOpen, rnSum := 0, 0
+	cnt, saveStrategy := uint(0), uint(0)
+	monthsCnt := make([]uint, len(monthCntParams), len(monthCntParams))
 
 	for i, _ := range candleData.Time {
 		wallet += additionalMoney
@@ -192,6 +201,13 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 				openedCnt = wallet / openedPrice
 				wallet -= openedPrice * openedCnt
 				rnOpen = i
+
+				for mi, monthCnt := range monthCntParams {
+					if i >= monthCnt {
+						monthsCnt[mi]++
+						break
+					}
+				}
 			}
 		} else {
 			if 10000*o/openedPrice >= float64(10000+strategy.Cl) {
@@ -258,7 +274,7 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
 		}
 
-		fmt.Printf("\n %d %s %s %s %s %s %s",
+		fmt.Printf("\n %d %s %s %s %s %s %s %s",
 			saveStrategy,
 			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
 			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
@@ -266,6 +282,7 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 			color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
 			color.New(color.FgHiRed).Sprintf("%8.2f", speed),
 			strategy.String(),
+			color.New(color.BgBlue, color.FgYellow).Sprintf("%+v", monthsCnt),
 		)
 	}
 }

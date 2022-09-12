@@ -29,7 +29,7 @@ func init() {
 		apiHandler = exmo
 	}
 	resolution = os.Getenv("resolution")
-	envMinCnt = toInt(os.Getenv("min_cnt"))
+	envMinCnt = toUint(os.Getenv("min_cnt"))
 	envMaxLoss = s2f(os.Getenv("max_loss"))
 	years = toInt(os.Getenv("years"))
 	months = toInt(os.Getenv("months"))
