@@ -17,31 +17,30 @@ type StrategyTestTimes struct {
 var strategyTestTimes StrategyTestTimes
 
 func testMatrixStrategies(strategiesTestMatrix [][]*FavoriteStrategies) {
-	var globalMaxWallet = 0.0
-	var globalMaxSafety = 0.0
+	globalMaxWallet, globalMaxSafety = 0.0, 0.0
 
 	for _, testDataSlice := range strategiesTestMatrix {
-		testSliceOfStrategies(0, len(testDataSlice), testDataSlice, []Strategy{}, &globalMaxWallet, &globalMaxSafety)
+		testSliceOfStrategies(0, len(testDataSlice), testDataSlice, []Strategy{})
 	}
 }
 
-func testSliceOfStrategies(i, l int, testDataSlice []*FavoriteStrategies, strategies []Strategy, globalMaxWallet, globalMaxSafety *float64) {
+func testSliceOfStrategies(i, l int, testDataSlice []*FavoriteStrategies, strategies []Strategy) {
 	testData := testDataSlice[i]
 	if i == l-1 {
 		parallel(0, len(testData.TotalStrategies), func(ys <-chan int) {
 			for y := range ys {
-				testStrategies(strategyTestTimes, append(strategies, testData.TotalStrategies[y]), globalMaxWallet, globalMaxSafety)
+				testStrategies(strategyTestTimes, append(strategies, testData.TotalStrategies[y]))
 			}
 		})
 		return
 	} else {
 		for _, op := range testData.TotalStrategies {
-			testSliceOfStrategies(i+1, l, testDataSlice, append(strategies, op), globalMaxWallet, globalMaxSafety)
+			testSliceOfStrategies(i+1, l, testDataSlice, append(strategies, op))
 		}
 	}
 }
 
-func testStrategies(times StrategyTestTimes, strategies []Strategy, globalMaxWallet, globalMaxSafety *float64) {
+func testStrategies(times StrategyTestTimes, strategies []Strategy) {
 	wallet := StartDeposit
 	maxWallet := StartDeposit
 	rnOpen, rnSum, cnt, cl, saveStrategy := 0, 0, 0, 0, 0
@@ -114,14 +113,14 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy, globalMaxWal
 		wallet += openedPrice * openedCnt
 	}
 
-	if wallet > *globalMaxWallet {
-		*globalMaxWallet = wallet
+	if wallet > globalMaxWallet {
+		globalMaxWallet = wallet
 		saveStrategy += 1
 	}
 
 	safety := wallet / maxLoss
-	if safety > *globalMaxSafety {
-		*globalMaxSafety = safety
+	if safety > globalMaxSafety {
+		globalMaxSafety = safety
 		saveStrategy += 4
 	}
 

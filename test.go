@@ -188,7 +188,7 @@ func (candleData *CandleData) strategyHasEnoughOpens(strategy Strategy, monthInd
 				monthCnt++
 			}
 
-			if cnt >= envMinCnt && monthCnt >= 2 {
+			if cnt >= envMinCnt && monthCnt >= 1 {
 				return true
 			}
 		}
@@ -207,6 +207,7 @@ func (candleData *CandleData) testStrategies(strategy Strategy, testData *Favori
 		candleData.testStrategy(strategy, testData, monthStartIndexes)
 	}
 }
+
 func (candleData *CandleData) testStrategy(strategy Strategy, testData *FavoriteStrategies, monthCntParams [3]int) {
 	wallet, maxWallet := StartDeposit, StartDeposit
 	maxLoss, openedCnt, speed, openedPrice, addedMoney := 0.0, 0.0, 0.0, 0.0, 0.0
