@@ -44,7 +44,7 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy) {
 	wallet := StartDeposit
 	maxWallet := StartDeposit
 	rnOpen, rnSum, cnt, cl, saveStrategy := 0, 0, 0, 0, 0
-	openedCnt, maxLoss, addedMoney := 0.0, 0.0, 0.0
+	openedCnt, maxLoss := 0.0, 0.0
 	var openedPrice float64
 
 	var candleData *CandleData
@@ -52,8 +52,6 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy) {
 	//month := time.Now().AddDate(0, -1, 0)
 
 	for _, t := range times.totalTimes[1:] {
-		wallet += additionalMoney
-		addedMoney += additionalMoney
 		//if t.Before(month) {
 		//	continue
 		//}
@@ -79,8 +77,8 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy) {
 				if 10000*o/openedPrice >= float64(10000+cl) {
 					wallet += o * openedCnt * Commission
 
-					if wallet-addedMoney > maxWallet {
-						maxWallet = wallet - addedMoney
+					if wallet > maxWallet {
+						maxWallet = wallet
 					}
 
 					cl = 0
@@ -97,8 +95,8 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy) {
 				continue
 			}
 			l := candleData.getCandle(0, index, L)
-			loss := 1 - l*openedCnt/(maxWallet+addedMoney)
-			if loss > 0.40 {
+			loss := 1 - l*openedCnt/maxWallet
+			if loss > 0.18 {
 				return
 			}
 			if loss > maxLoss {
@@ -106,8 +104,6 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy) {
 			}
 		}
 	}
-
-	wallet -= addedMoney
 
 	if openedCnt >= 1 {
 		wallet += openedPrice * openedCnt

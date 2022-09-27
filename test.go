@@ -19,11 +19,10 @@ var envMinCnt uint
 
 var envMaxLoss float64
 
-const additionalMoney = 0
-
 var globalMaxSpeed = 0.0
 var globalMaxWallet = 0.0
 var globalMaxSafety = 0.0
+var direction int
 
 type FavoriteStrategies struct {
 	Pair                string
@@ -103,18 +102,19 @@ func (candleData *CandleData) testPair() {
 	testData := getTestData(candleData.Pair)
 
 	proc := runtime.GOMAXPROCS(0)
-	tasks := make(chan Strategy, 2016)
+	tasks := make(chan Strategy, 84)
 	ready := make(chan bool, proc)
 
 	oneMonthAgoIndex := candleData.getMonthIndex(1)
 	twoMonthsAgoIndex := candleData.getMonthIndex(2)
 	threeMonthsAgoIndex := candleData.getMonthIndex(3)
 	monthStartIndexes := [3]int{oneMonthAgoIndex, twoMonthsAgoIndex, threeMonthsAgoIndex}
+	maxTimeIndex := candleData.index()
 
 	for i := 0; i < proc; i++ {
 		go func(tasks <-chan Strategy, ready chan<- bool) {
 			for strategy := range tasks {
-				candleData.testStrategies(strategy, testData, monthStartIndexes)
+				candleData.testStrategies(strategy, testData, monthStartIndexes, maxTimeIndex)
 			}
 			ready <- true
 		}(tasks, ready)
@@ -151,77 +151,41 @@ func (candleData *CandleData) testPair() {
 	testData.backup()
 }
 
-//func (candleData *CandleData) strategyHasEnoughMonthCnt(strategy Strategy, monthStartIndex, maxTimeIndex int) bool {
-//	cnt := 0
-//	openedPrice := 0.0
-//	open := false
-//
-//	for i := monthStartIndex; i < maxTimeIndex; i++ {
-//		o := candleData.Candles[O][i]
-//		if false == open {
-//			if 10000*candleData.getIndicatorRatio(strategy, i-1) >= float64(10000+strategy.Op) {
-//				openedPrice = o
-//				open = true
-//			}
-//		} else {
-//			if 10000*o/openedPrice >= float64(10000+strategy.Cl) {
-//				if cnt++; cnt >= 2 {
-//					return true
-//				}
-//			}
-//		}
-//	}
-//
-//	return false
-//}
+func (candleData *CandleData) strategyHasEnoughOpens(strategy Strategy, monthIndex, maxTimeIndex int) bool {
+	cnt := 0
 
-func (candleData *CandleData) strategyHasEnoughOpens(strategy Strategy, monthIndex int) bool {
-	cnt := uint(0)
-	monthCnt := 0
-	maxTimeIndex := candleData.index()
-
-	for i := 1; i < maxTimeIndex; i++ {
+	for i := monthIndex; i < maxTimeIndex; i++ {
 		if 10000*candleData.getIndicatorRatio(strategy, i-1) >= float64(10000+strategy.Op) {
 			cnt++
-
-			if i >= monthIndex {
-				monthCnt++
-			}
-
-			if cnt >= envMinCnt && monthCnt >= 1 {
+			if cnt == 3 {
 				return true
 			}
+			i += 12
 		}
 	}
 
 	return false
 }
 
-func (candleData *CandleData) testStrategies(strategy Strategy, testData *FavoriteStrategies, monthStartIndexes [3]int) {
-	if false == candleData.strategyHasEnoughOpens(strategy, monthStartIndexes[0]) {
+func (candleData *CandleData) testStrategies(strategy Strategy, testData *FavoriteStrategies, monthStartIndexes [3]int, maxTimeIndex int) {
+	if false == candleData.strategyHasEnoughOpens(strategy, monthStartIndexes[1], maxTimeIndex) {
 		return
 	}
 
 	for cl := 20; cl < 500; cl += 20 {
 		strategy.Cl = cl
-		candleData.testStrategy(strategy, testData, monthStartIndexes)
+		candleData.testStrategy(strategy, testData, monthStartIndexes, maxTimeIndex)
 	}
 }
 
-func (candleData *CandleData) testStrategy(strategy Strategy, testData *FavoriteStrategies, monthCntParams [3]int) {
+func (candleData *CandleData) testStrategy(strategy Strategy, testData *FavoriteStrategies, monthCntParams [3]int, maxTimeIndex int) {
 	wallet, maxWallet := StartDeposit, StartDeposit
-	maxLoss, openedCnt, speed, openedPrice, addedMoney := 0.0, 0.0, 0.0, 0.0, 0.0
+	maxLoss, openedCnt, speed, openedPrice := 0.0, 0.0, 0.0, 0.0
 	rnOpen, rnSum := 0, 0
 	cnt, saveStrategy := uint(0), uint(0)
 	monthsCnt := make([]uint, len(monthCntParams), len(monthCntParams))
 
-	for i, _ := range candleData.Time {
-		wallet += additionalMoney
-		addedMoney += additionalMoney
-		if i == 0 {
-			continue
-		}
-
+	for i := 1; i < maxTimeIndex; i++ {
 		o := candleData.Candles[O][i]
 		if openedCnt == 0 {
 			if 10000*candleData.getIndicatorRatio(strategy, i-1) >= float64(10000+strategy.Op) {
@@ -238,11 +202,13 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 				}
 			}
 		} else {
+			//if 10000*openedPrice/o >= float64(10000+strategy.Cl) {
+			//	wallet += (2*openedPrice - o) * openedCnt * Commission
 			if 10000*o/openedPrice >= float64(10000+strategy.Cl) {
 				wallet += o * openedCnt * Commission
 
-				if wallet-addedMoney > maxWallet {
-					maxWallet = wallet - addedMoney
+				if wallet > maxWallet {
+					maxWallet = wallet
 				}
 
 				openedCnt = 0.0
@@ -253,7 +219,7 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 
 		if openedCnt != 0 {
 			l := candleData.Candles[L][i]
-			loss := 1 - l*openedCnt/(maxWallet+addedMoney)
+			loss := 1 - l*openedCnt/maxWallet
 			if loss > maxLoss {
 				maxLoss = loss
 				if maxLoss >= envMaxLoss {
@@ -263,8 +229,6 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 		}
 
 	}
-
-	wallet -= addedMoney
 
 	if openedCnt >= 1 {
 		wallet += openedPrice * openedCnt
@@ -280,7 +244,7 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 	}
 
 	speed = (wallet - StartDeposit) / float64(rnSum)
-	if speed > (globalMaxSpeed)*0.996 /* 1000.0*/ {
+	if speed > globalMaxSpeed*0.996 /* 1000.0*/ {
 		saveStrategy += 2
 		if speed > globalMaxSpeed {
 			globalMaxSpeed = speed
@@ -288,9 +252,11 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 	}
 
 	safety := wallet / maxLoss
-	if safety > globalMaxSafety {
-		globalMaxSafety = safety
+	if safety > globalMaxSafety*0.996 {
 		saveStrategy += 4
+		if safety > globalMaxSafety {
+			globalMaxSafety = safety
+		}
 	}
 
 	if saveStrategy > 0 {

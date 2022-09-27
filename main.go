@@ -50,6 +50,7 @@ func main() {
 	envTestPair := os.Getenv("testPair")
 	envTestPairs := os.Getenv("testPairs")
 	envTestStrategies := os.Getenv("testStrategies")
+	direction = toInt(os.Getenv("direction"))
 
 	CandleStorage = make(map[string]CandleData)
 	FavoriteStrategyStorage = make(map[string]FavoriteStrategies)

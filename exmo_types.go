@@ -33,6 +33,8 @@ type Price float64
 type CurrencyBalanceResponse struct {
 	USDT Price `json:"USDT,string"`
 	ETC  Price `json:"ETC,string"`
+	UNI  Price `json:"UNI,string"`
+	ALGO Price `json:"ALGO,string"`
 }
 
 func (c ExmoCandle) transform() Candle {
