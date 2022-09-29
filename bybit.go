@@ -5,6 +5,7 @@ import (
 	"github.com/frankrap/bybit-api/rest"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -30,7 +31,7 @@ func (bybit Bybit) downloadPairCandles(candleData *CandleData) {
 	startDate := (time.Now().AddDate(years, months, days).Unix()/seconds)*seconds + 1
 
 	for startDate < endDate {
-		_, _, candles, err := b.LinearGetKLine("ETCUSDT", resolution, startDate, 200)
+		_, _, candles, err := b.LinearGetKLine(strings.ReplaceAll(candleData.Pair, "_", ""), resolution, startDate, 200)
 		if err != nil {
 			log.Printf("%v", err)
 			return
