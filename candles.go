@@ -154,7 +154,7 @@ func (candleData *CandleData) backup() {
 }
 
 func (candleData *CandleData) getFileName() string {
-	return fmt.Sprintf("candles_%s_%s.dat", candleData.Pair, resolution)
+	return fmt.Sprintf("%s_candles_%s_%s.dat", exchange, candleData.Pair, resolution)
 }
 
 func (candleData *CandleData) save() {

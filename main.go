@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/joho/godotenv"
+	"log"
 	"math/rand"
 	"os"
 	"sort"
@@ -18,15 +19,21 @@ const StartDeposit = float64(100000.0)
 
 const Commission = float64(0.98)
 
+var exchange string
+
 func init() {
 	_ = godotenv.Load()
 	rand.Seed(time.Now().UnixNano())
 
-	switch os.Getenv("exchange") {
+	exchange = os.Getenv("exchange")
+
+	switch exchange {
 	case "exmo":
 		apiHandler = exmo
+	case "bybit":
+		apiHandler = bybit.init()
 	default:
-		apiHandler = exmo
+		log.Fatal("NO HANDLER")
 	}
 	resolution = os.Getenv("resolution")
 	envMinCnt = toUint(os.Getenv("min_cnt"))
@@ -50,7 +57,6 @@ func main() {
 	envTestPair := os.Getenv("testPair")
 	envTestPairs := os.Getenv("testPairs")
 	envTestStrategies := os.Getenv("testStrategies")
-	direction = toInt(os.Getenv("direction"))
 
 	CandleStorage = make(map[string]CandleData)
 	FavoriteStrategyStorage = make(map[string]FavoriteStrategies)

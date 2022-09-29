@@ -22,7 +22,9 @@ var envMaxLoss float64
 var globalMaxSpeed = 0.0
 var globalMaxWallet = 0.0
 var globalMaxSafety = 0.0
-var direction int
+
+var stat1 = make([]int, len(BarTypes), len(BarTypes))
+var stat2 = make([]int, len(IndicatorTypes), len(IndicatorTypes))
 
 type FavoriteStrategies struct {
 	Pair                string
@@ -72,7 +74,7 @@ func (testData *FavoriteStrategies) backup() {
 }
 
 func (testData *FavoriteStrategies) getFileName() string {
-	return fmt.Sprintf("tests_%s_%s.dat", testData.Pair, resolution)
+	return fmt.Sprintf("%s_tests_%s_%s.dat", exchange, testData.Pair, resolution)
 }
 
 func (testData *FavoriteStrategies) saveToStorage() {
@@ -148,6 +150,8 @@ func (candleData *CandleData) testPair() {
 	}
 	close(ready)
 
+	fmt.Printf("\n%+v", stat1)
+	fmt.Printf("\n%+v", stat2)
 	testData.backup()
 }
 
@@ -252,7 +256,7 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 	}
 
 	safety := wallet / maxLoss
-	if safety > globalMaxSafety*0.996 {
+	if safety > globalMaxSafety*0.990 {
 		saveStrategy += 4
 		if safety > globalMaxSafety {
 			globalMaxSafety = safety
@@ -268,7 +272,14 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
 		}
 
-		fmt.Printf("\n %d %s %s %s %s %s %s %s",
+		if (wallet-StartDeposit)/StartDeposit >= 0.2 {
+			stat1[strategy.Ind1.BarType]++
+			stat1[strategy.Ind2.BarType]++
+			stat2[strategy.Ind1.IndicatorType-1]++
+			stat2[strategy.Ind2.IndicatorType-1]++
+		}
+
+		fmt.Printf("\n %d %s %s %s %s %s %s %s %+v %+v",
 			saveStrategy,
 			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
 			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
@@ -277,6 +288,8 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 			color.New(color.FgHiRed).Sprintf("%8.2f", speed),
 			strategy.String(),
 			color.New(color.BgBlue, color.FgYellow).Sprintf("%+v", monthsCnt),
+			stat1,
+			stat2,
 		)
 	}
 }
