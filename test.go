@@ -36,7 +36,12 @@ type FavoriteStrategies struct {
 }
 
 var TestBarTypes = []BarType{
-	LOC, LOH, LCH, OCH, LO, LC, LH, OC, OH, CH, //O, C, H, L,
+	/*L,*/ /*O, */ C, H, LO, LC, LH, OC, OH, CH, LOC, LOH, LCH, OCH,
+}
+
+var TestIndicatorTypes = []IndicatorType{
+	IndicatorTypeSma, IndicatorTypeEma, IndicatorTypeDema, IndicatorTypeTema, IndicatorTypeTemaZero, IndicatorType2Ema,
+	IndicatorType3Ema, IndicatorTypeEmaTema, IndicatorType2EmaTema, IndicatorType3EmaTema, IndicatorType2Tema,
 }
 
 func initTestData(pair string) *FavoriteStrategies {
@@ -123,10 +128,10 @@ func (candleData *CandleData) testPair() {
 	}
 
 	for _, barType1 := range TestBarTypes {
-		for _, indicatorType1 := range IndicatorTypes {
+		for _, indicatorType1 := range TestIndicatorTypes {
 			for coef1 := range candleData.Indicators[indicatorType1] {
 				for _, barType2 := range TestBarTypes {
-					for _, indicatorType2 := range IndicatorTypes {
+					for _, indicatorType2 := range TestIndicatorTypes {
 						for coef2 := range candleData.Indicators[indicatorType2] {
 							for op := 0; op < 60; op += 4 {
 								tasks <- Strategy{
