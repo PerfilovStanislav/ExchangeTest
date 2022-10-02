@@ -133,13 +133,14 @@ func (candleData *CandleData) testPair() {
 				for _, barType2 := range TestBarTypes {
 					for _, indicatorType2 := range TestIndicatorTypes {
 						for coef2 := range candleData.Indicators[indicatorType2] {
-							for op := 0; op < 60; op += 4 {
+							for op := 0; op < 60; op += 6 {
 								tasks <- Strategy{
 									candleData.Pair,
 									op,
 									Indicator{indicatorType1, barType1, coef1},
 									-9999,
 									Indicator{indicatorType2, barType2, coef2},
+									-9999,
 								}
 							}
 						}
@@ -169,7 +170,7 @@ func (candleData *CandleData) strategyHasEnoughOpens(strategy Strategy, monthInd
 			if cnt == 3 {
 				return true
 			}
-			i += 12
+			i += 8
 		}
 	}
 
@@ -181,9 +182,12 @@ func (candleData *CandleData) testStrategies(strategy Strategy, testData *Favori
 		return
 	}
 
-	for cl := 20; cl < 500; cl += 20 {
-		strategy.Cl = cl
-		candleData.testStrategy(strategy, testData, monthStartIndexes, maxTimeIndex)
+	for tp := 8; tp < 1000; tp = int(float64(tp) * 1.5) {
+		for sl := 8; sl < 1000; sl = int(float64(sl) * 1.5) {
+			strategy.Tp = 200 + tp
+			strategy.Sl = 200 + sl
+			candleData.testStrategy(strategy, testData, monthStartIndexes, maxTimeIndex)
+		}
 	}
 }
 
@@ -196,33 +200,17 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 
 	for i := 1; i < maxTimeIndex; i++ {
 		o := candleData.Candles[O][i]
-		if openedCnt == 0 {
-			if 10000*candleData.getIndicatorRatio(strategy, i-1) >= float64(10000+strategy.Op) {
-				openedPrice = o
-				openedCnt = wallet / openedPrice
-				wallet -= openedPrice * openedCnt
-				rnOpen = i
+		if openedCnt == 0 && 10000*candleData.getIndicatorRatio(strategy, i-1) >= float64(10000+strategy.Op) {
+			openedPrice = o
+			openedCnt = wallet / openedPrice
+			wallet -= openedPrice * openedCnt
+			rnOpen = i
 
-				for mi, monthCnt := range monthCntParams {
-					if i >= monthCnt {
-						monthsCnt[mi]++
-						break
-					}
+			for mi, monthCnt := range monthCntParams {
+				if i >= monthCnt {
+					monthsCnt[mi]++
+					break
 				}
-			}
-		} else {
-			//if 10000*openedPrice/o >= float64(10000+strategy.Cl) {
-			//	wallet += (2*openedPrice - o) * openedCnt * Commission
-			if 10000*o/openedPrice >= float64(10000+strategy.Cl) {
-				wallet += o * openedCnt * Commission
-
-				if wallet > maxWallet {
-					maxWallet = wallet
-				}
-
-				openedCnt = 0.0
-				cnt++
-				rnSum += i - rnOpen
 			}
 		}
 
@@ -235,8 +223,33 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 					return
 				}
 			}
-		}
 
+			// --
+			sl := float64(10000-strategy.Sl) * openedPrice / 10000
+			if l <= sl {
+				wallet += sl * openedCnt * Commission
+
+				openedCnt = 0.0
+				cnt++
+				rnSum += i - rnOpen
+				continue
+			}
+
+			// --
+			h := candleData.Candles[H][i]
+			tp := float64(10000+strategy.Tp) * openedPrice / 10000
+			if h >= tp {
+				wallet += tp * openedCnt * Commission
+
+				if wallet > maxWallet {
+					maxWallet = wallet
+				}
+
+				openedCnt = 0.0
+				cnt++
+				rnSum += i - rnOpen
+			}
+		}
 	}
 
 	if openedCnt >= 1 {
@@ -298,3 +311,115 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 		)
 	}
 }
+
+//func (candleData *CandleData) testStrategy(strategy Strategy, testData *FavoriteStrategies, monthCntParams [3]int, maxTimeIndex int) {
+//	wallet, maxWallet := StartDeposit, StartDeposit
+//	maxLoss, openedCnt, speed, openedPrice := 0.0, 0.0, 0.0, 0.0
+//	rnOpen, rnSum := 0, 0
+//	cnt, saveStrategy := uint(0), uint(0)
+//	monthsCnt := make([]uint, len(monthCntParams), len(monthCntParams))
+//
+//	for i := 1; i < maxTimeIndex; i++ {
+//		o := candleData.Candles[O][i]
+//		if openedCnt == 0 {
+//			if 10000*candleData.getIndicatorRatio(strategy, i-1) >= float64(10000+strategy.Op) {
+//				openedPrice = o
+//				openedCnt = wallet / openedPrice
+//				wallet -= openedPrice * openedCnt
+//				rnOpen = i
+//
+//				for mi, monthCnt := range monthCntParams {
+//					if i >= monthCnt {
+//						monthsCnt[mi]++
+//						break
+//					}
+//				}
+//			}
+//		} else {
+//			//if 10000*openedPrice/o >= float64(10000+strategy.Tp) {
+//			//	wallet += (2*openedPrice - o) * openedCnt * Commission
+//			if 10000*o/openedPrice >= float64(10000+strategy.Tp) {
+//				wallet += o * openedCnt * Commission
+//
+//				if wallet > maxWallet {
+//					maxWallet = wallet
+//				}
+//
+//				openedCnt = 0.0
+//				cnt++
+//				rnSum += i - rnOpen
+//			}
+//		}
+//
+//		if openedCnt != 0 {
+//			l := candleData.Candles[L][i]
+//			loss := 1 - l*openedCnt/maxWallet
+//			if loss > maxLoss {
+//				maxLoss = loss
+//				if maxLoss >= envMaxLoss {
+//					return
+//				}
+//			}
+//		}
+//
+//	}
+//
+//	if openedCnt >= 1 {
+//		wallet += openedPrice * openedCnt
+//	}
+//
+//	if rnSum == 0 || cnt < envMinCnt {
+//		return
+//	}
+//
+//	if wallet > globalMaxWallet {
+//		globalMaxWallet = wallet
+//		saveStrategy += 1
+//	}
+//
+//	speed = (wallet - StartDeposit) / float64(rnSum)
+//	if speed > globalMaxSpeed*0.996 /* 1000.0*/ {
+//		saveStrategy += 2
+//		if speed > globalMaxSpeed {
+//			globalMaxSpeed = speed
+//		}
+//	}
+//
+//	safety := wallet / maxLoss
+//	if safety > globalMaxSafety*0.990 {
+//		saveStrategy += 4
+//		if safety > globalMaxSafety {
+//			globalMaxSafety = safety
+//		}
+//	}
+//
+//	if saveStrategy > 0 {
+//		if saveStrategy&4 == 4 {
+//			testData.StrategiesMaxSafety = append(testData.StrategiesMaxSafety, strategy)
+//		} else if saveStrategy&2 == 2 {
+//			testData.StrategiesMaxSpeed = append(testData.StrategiesMaxSpeed, strategy)
+//		} else if saveStrategy&1 == 1 {
+//			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
+//		}
+//
+//		if (wallet-StartDeposit)/StartDeposit >= 0.2 {
+//			stat1[strategy.Ind1.BarType]++
+//			stat1[strategy.Ind2.BarType]++
+//			stat2[strategy.Ind1.IndicatorType-1]++
+//			stat2[strategy.Ind2.IndicatorType-1]++
+//		}
+//
+//		fmt.Printf("\n %d %s %s %s %s %s %s %s %+v %+v",
+//			saveStrategy,
+//			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
+//			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
+//			color.New(color.BgBlue).Sprintf("%4d", cnt),
+//			color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
+//			color.New(color.FgHiRed).Sprintf("%8.2f", speed),
+//			strategy.String(),
+//			color.New(color.BgBlue, color.FgYellow).Sprintf("%+v", monthsCnt),
+//			stat1,
+//			stat2,
+//		)
+//	}
+//}

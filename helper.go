@@ -29,7 +29,7 @@ func getStrategy(str string) Strategy {
 		Pair: p[0],
 		Op:   toInt(p[1]),
 		Ind1: ind(p[4], p[5], p[6]),
-		Cl:   toInt(p[2]),
+		Tp:   toInt(p[2]),
 		Ind2: ind(p[8], p[9], p[10]),
 	}
 }

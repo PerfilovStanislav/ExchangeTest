@@ -61,7 +61,7 @@ func testStrategies(times StrategyTestTimes, strategies []Strategy) {
 				candleData = getCandleData(strategy.Pair)
 				index := times.indexes[strategy.Pair][t]
 				if index > 0 && 10000*candleData.getIndicatorRatio(strategy, index-1)/float64(10000+strategy.Op) >= 1.0 {
-					cl = strategy.Cl
+					cl = strategy.Tp
 
 					openedPrice = candleData.getCandle(0, index, O)
 					openedCnt = wallet / openedPrice

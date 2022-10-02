@@ -343,8 +343,9 @@ type Strategy struct {
 	Pair string
 	Op   int
 	Ind1 Indicator
-	Cl   int
+	Tp   int
 	Ind2 Indicator
+	Sl   int
 }
 
 type Indicator struct {
@@ -389,7 +390,7 @@ func (strategy Strategy) String() string {
 	return fmt.Sprintf("{ %s %s %s | %s | %s }",
 		color.New(color.FgBlue).Sprintf("%s", strategy.Pair),
 		color.New(color.BgHiGreen, color.FgBlack).Sprintf("%3d", strategy.Op),
-		color.New(color.BgHiRed, color.FgBlack).Sprintf("%3d", strategy.Cl),
+		color.New(color.BgHiRed, color.FgBlack).Sprintf("%3d", strategy.Tp),
 		strategy.Ind1.String(),
 		strategy.Ind2.String(),
 	)
