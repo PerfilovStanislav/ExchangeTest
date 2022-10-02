@@ -387,7 +387,7 @@ func showStrategies(strategies []Strategy) string {
 }
 
 func (strategy Strategy) String() string {
-	return fmt.Sprintf("{ %s %s %s | %s | %s }",
+	return fmt.Sprintf("{ %s %s %s %s | %s | %s }",
 		color.New(color.FgBlue).Sprintf("%s", strategy.Pair),
 		color.New(color.BgHiBlue, color.FgBlack).Sprintf("%3d", strategy.Op),
 		color.New(color.BgHiGreen, color.FgBlack).Sprintf("%3d", strategy.Tp),
