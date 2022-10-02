@@ -182,10 +182,10 @@ func (candleData *CandleData) testStrategies(strategy Strategy, testData *Favori
 		return
 	}
 
-	for tp := 8; tp < 2466; tp = int(float64(tp) * 1.5) {
+	for tp := 24; tp < 2466; tp = int(float64(tp) * 1.5) {
 		for sl := 8; sl < 2466; sl = int(float64(sl) * 1.5) {
-			strategy.Tp = 50 + tp
-			strategy.Sl = 50 + sl
+			strategy.Tp = tp
+			strategy.Sl = sl
 			candleData.testStrategy(strategy, testData, monthStartIndexes, maxTimeIndex)
 		}
 	}
