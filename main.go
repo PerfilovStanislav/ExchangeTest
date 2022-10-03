@@ -32,6 +32,8 @@ func init() {
 		apiHandler = exmo
 	case "bybit":
 		apiHandler = bybit.init()
+	case "binance":
+		apiHandler = binance.init()
 	default:
 		log.Fatal("NO HANDLER")
 	}
