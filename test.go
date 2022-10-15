@@ -163,8 +163,10 @@ func (candleData *CandleData) testPair() {
 func (candleData *CandleData) strategyHasEnoughOpens(strategy Strategy, monthIndex, maxTimeIndex int) bool {
 	cnt := 0
 
+	ind1 := candleData.getIndicatorValue(strategy.Ind1)
+	ind2 := candleData.getIndicatorValue(strategy.Ind2)
 	for i := monthIndex; i < maxTimeIndex; i++ {
-		if 10000*candleData.getIndicatorRatio(strategy, i-1) >= float64(10000+strategy.Op) {
+		if 10000*ind1[i-1]/ind2[i-1] >= float64(10000+strategy.Op) {
 			cnt++
 			if cnt == 3 {
 				return true
@@ -194,10 +196,12 @@ func (candleData *CandleData) testStrategy(strategy Strategy, testData *Favorite
 	cnt, saveStrategy := uint(0), uint(0)
 	monthsCnt := make([]uint, len(monthCntParams), len(monthCntParams))
 
+	ind1 := candleData.getIndicatorValue(strategy.Ind1)
+	ind2 := candleData.getIndicatorValue(strategy.Ind2)
 	for i := 1; i < maxTimeIndex; i++ {
 		o := candleData.Candles[O][i]
 		if openedCnt == 0 {
-			if 10000*candleData.getIndicatorRatio(strategy, i-1) >= float64(10000+strategy.Op) {
+			if 10000*ind1[i-1]/ind2[i-1] >= float64(10000+strategy.Op) {
 				openedPrice = o
 				openedCnt = wallet / openedPrice
 				wallet -= openedPrice * openedCnt
