@@ -38,6 +38,7 @@ func init() {
 		log.Fatal("NO HANDLER")
 	}
 	resolution = os.Getenv("resolution")
+	envLastMonthCnt = toUint(os.Getenv("min_last_month_cnt"))
 	envMinCnt = toUint(os.Getenv("min_cnt"))
 	envMaxLoss = s2f(os.Getenv("max_loss"))
 	years = toInt(os.Getenv("years"))

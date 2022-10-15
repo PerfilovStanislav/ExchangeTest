@@ -5,7 +5,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/fatih/color"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"time"
 )
@@ -28,6 +28,15 @@ type Candle struct {
 	T   time.Time
 }
 
+type CandleData struct {
+	Pair       string
+	Time       []time.Time
+	Candles    map[BarType][]float64
+	Indicators map[IndicatorType]map[int]map[BarType][]float64
+}
+
+var CandleStorage map[string]CandleData
+
 type BarType int8
 
 const (
@@ -46,15 +55,6 @@ const (
 	LCH
 	OCH
 )
-
-type CandleData struct {
-	Pair       string
-	Time       []time.Time
-	Candles    map[BarType][]float64
-	Indicators map[IndicatorType]map[int]map[BarType][]float64
-}
-
-var CandleStorage map[string]CandleData
 
 func (barType BarType) String() string {
 	return map[BarType]string{
@@ -150,7 +150,7 @@ func (candleData *CandleData) restore() bool {
 
 func (candleData *CandleData) backup() {
 	dataOut := EncodeToBytes(candleData)
-	_ = ioutil.WriteFile(candleData.getFileName(), dataOut, 0644)
+	_ = os.WriteFile(candleData.getFileName(), dataOut, 0644)
 }
 
 func (candleData *CandleData) getFileName() string {
@@ -339,12 +339,35 @@ func (candleData *CandleData) fillIndicator(l int, ind Indicator) float64 {
 	return ind.getValue(candleData, l)
 }
 
+type StrategyType int8
+
+const (
+	NoStrategyType StrategyType = iota
+	Long
+	Short
+)
+
+func (strategyType StrategyType) String() string {
+	return map[StrategyType]string{
+		Long:  "long",
+		Short: "short",
+	}[strategyType]
+}
+
+func (strategyType StrategyType) value(s string) StrategyType {
+	return map[string]StrategyType{
+		"long":  Long,
+		"short": Short,
+	}[s]
+}
+
 type Strategy struct {
 	Pair string
 	Op   int
 	Ind1 Indicator
 	Cl   int
 	Ind2 Indicator
+	Type StrategyType
 }
 
 type Indicator struct {
@@ -386,7 +409,8 @@ func showStrategies(strategies []Strategy) string {
 }
 
 func (strategy Strategy) String() string {
-	return fmt.Sprintf("{ %s %s %s | %s | %s }",
+	return fmt.Sprintf("{ %s %s %s %s | %s | %s }",
+		color.New(color.BgHiYellow).Sprintf("%s", strategy.Type),
 		color.New(color.FgBlue).Sprintf("%s", strategy.Pair),
 		color.New(color.BgHiGreen, color.FgBlack).Sprintf("%3d", strategy.Op),
 		color.New(color.BgHiRed, color.FgBlack).Sprintf("%3d", strategy.Cl),
