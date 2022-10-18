@@ -72,8 +72,8 @@ func (testData *FavoriteStrategies) restore() bool {
 }
 
 func (testData *FavoriteStrategies) backup() {
-	testData.StrategiesMaxSafety = testData.StrategiesMaxSafety[maxInt(len(testData.StrategiesMaxSafety)-50, 0):]
-	testData.StrategiesMaxWallet = testData.StrategiesMaxWallet[maxInt(len(testData.StrategiesMaxWallet)-50, 0):]
+	testData.StrategiesMaxSafety = testData.StrategiesMaxSafety[maxInt(len(testData.StrategiesMaxSafety)-200, 0):]
+	testData.StrategiesMaxWallet = testData.StrategiesMaxWallet[maxInt(len(testData.StrategiesMaxWallet)-10, 0):]
 	testData.StrategiesMaxSpeed = testData.StrategiesMaxSpeed[maxInt(len(testData.StrategiesMaxSpeed)-100, 0):]
 	dataOut := EncodeToBytes(testData)
 	_ = os.WriteFile(testData.getFileName(), dataOut, 0644)
@@ -184,7 +184,7 @@ func (candleData *CandleData) strategyHasEnoughOpens(strategy Strategy, monthInd
 			if cnt == envLastMonthCnt {
 				return true
 			}
-			i += 12
+			i += 8
 		}
 	}
 
@@ -230,8 +230,6 @@ func (candleData *CandleData) testLongStrategy(strategy Strategy, testData *Favo
 				//}
 			}
 		} else {
-			//if 10000*openedPrice/o >= float64(10000+strategy.Cl) {
-			//	wallet += (2*openedPrice - o) * openedCnt * Commission
 			if 10000*o/openedPrice >= float64(10000+strategy.Cl) {
 				wallet += o * openedCnt * Commission
 
@@ -361,7 +359,7 @@ func (candleData *CandleData) testShortStrategy(strategy Strategy, testData *Fav
 
 		if openedCnt != 0 {
 			h := highs[i]
-			loss := 1 - ((2*openedPrice-h)*openedCnt)/maxWallet
+			loss := 1 - (2*openedPrice-h)*openedCnt/maxWallet
 			if loss > maxLoss {
 				maxLoss = loss
 				if maxLoss >= envMaxLoss {
