@@ -485,6 +485,14 @@ func (candleData *CandleData) testTpSlStrategy(strategy Strategy, ind1, ind2 []f
 				cnt++
 				rnSum += i - rnOpen
 				continue
+			} else {
+				loss := 1 - l*openedCnt/maxWallet
+				if loss > maxLoss {
+					maxLoss = loss
+					if maxLoss >= envMaxLoss {
+						return TestOk
+					}
+				}
 			}
 
 			// --
@@ -545,16 +553,16 @@ func (candleData *CandleData) testTpSlStrategy(strategy Strategy, ind1, ind2 []f
 			strategy.String(),
 		)
 
-		if slCnt == 0 {
-			return TestNoStopLosses
-		}
-
 		if saveStrategy&4 == 4 {
 			testData.StrategiesMaxSafety = append(testData.StrategiesMaxSafety, strategy)
 		} else if saveStrategy&2 == 2 {
 			testData.StrategiesMaxSpeed = append(testData.StrategiesMaxSpeed, strategy)
 		} else if saveStrategy&1 == 1 {
 			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
+		}
+
+		if slCnt == 0 {
+			return TestNoStopLosses
 		}
 	}
 
