@@ -345,12 +345,14 @@ const (
 	NoStrategyType StrategyType = iota
 	Long
 	Short
+	TpSl
 )
 
 func (strategyType StrategyType) String() string {
 	return map[StrategyType]string{
 		Long:  "long",
 		Short: "short",
+		TpSl:  "tp_sl",
 	}[strategyType]
 }
 
@@ -358,6 +360,7 @@ func (strategyType StrategyType) value(s string) StrategyType {
 	return map[string]StrategyType{
 		"long":  Long,
 		"short": Short,
+		"tp_sl": TpSl,
 	}[s]
 }
 
@@ -365,8 +368,9 @@ type Strategy struct {
 	Pair string
 	Op   int
 	Ind1 Indicator
-	Cl   int
+	Tp   int
 	Ind2 Indicator
+	Sl   int
 	Type StrategyType
 }
 
@@ -409,11 +413,12 @@ func showStrategies(strategies []Strategy) string {
 }
 
 func (strategy Strategy) String() string {
-	return fmt.Sprintf("{ %s %s %s %s | %s | %s }",
+	return fmt.Sprintf("{ %s %s %s %s %s | %s | %s }",
 		color.New(color.BgYellow, color.FgBlack).Sprintf("%s", strategy.Type),
 		color.New(color.FgBlue).Sprintf("%s", strategy.Pair),
-		color.New(color.BgHiGreen, color.FgBlack).Sprintf("%3d", strategy.Op),
-		color.New(color.BgHiRed, color.FgBlack).Sprintf("%3d", strategy.Cl),
+		color.New(color.BgHiBlue, color.FgBlack).Sprintf("%3d", strategy.Op),
+		color.New(color.BgHiGreen, color.FgBlack).Sprintf("%3d", strategy.Tp),
+		color.New(color.BgHiRed, color.FgBlack).Sprintf("%3d", strategy.Sl),
 		strategy.Ind1.String(),
 		strategy.Ind2.String(),
 	)
