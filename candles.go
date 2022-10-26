@@ -345,22 +345,25 @@ const (
 	NoStrategyType StrategyType = iota
 	Long
 	Short
-	TpSl
+	LongSl
+	ShortSl
 )
 
 func (strategyType StrategyType) String() string {
 	return map[StrategyType]string{
-		Long:  "long",
-		Short: "short",
-		TpSl:  "tp_sl",
+		Long:    "long",
+		Short:   "short",
+		LongSl:  "long_sl",
+		ShortSl: "short_sl",
 	}[strategyType]
 }
 
 func (strategyType StrategyType) value(s string) StrategyType {
 	return map[string]StrategyType{
-		"long":  Long,
-		"short": Short,
-		"tp_sl": TpSl,
+		"long":     Long,
+		"short":    Short,
+		"long_sl":  LongSl,
+		"short_sl": ShortSl,
 	}[s]
 }
 
