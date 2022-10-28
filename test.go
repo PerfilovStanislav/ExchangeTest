@@ -714,6 +714,74 @@ func (candleData *CandleData) testShortSlStrategy(strategy Strategy, ind1, ind2 
 	return TestMaxLoss
 }
 
+func (candleData *CandleData) test(strategy Strategy, enters []int, testData *FavoriteStrategies, maxTimeIndex int) {
+	slCnt := 0
+	wallet, maxWallet := StartDeposit, StartDeposit
+	openedCnt, openedPrice, sl, tp := 0.0, 0.0, 0.0, 0.0
+	cnt := uint(0)
+
+	candles := candleData.Candles
+	lows := candles[L]
+	opens := candles[O]
+	highs := candles[H]
+	for ii := 0; ii < len(enters)-1; ii++ {
+		i := enters[ii]
+
+		openedPrice = opens[i]
+		openedCnt = wallet / openedPrice
+		wallet -= openedPrice * openedCnt
+
+		sl = float64(10000+strategy.Sl) * openedPrice / 10000
+		tp = float64(10000-strategy.Tp) * openedPrice / 10000
+
+		var kk int
+		for k := i; k < maxTimeIndex; k++ {
+			h := highs[k]
+			kk = k
+
+			// --
+			if h >= sl {
+				slCnt++
+				wallet += (2*openedPrice - sl) * openedCnt * Commission
+
+				openedCnt = 0.0
+				cnt++
+				break
+			}
+
+			// --
+			l := lows[k]
+			if l <= tp {
+				wallet += (2*openedPrice - tp) * openedCnt * Commission
+
+				if wallet > maxWallet {
+					maxWallet = wallet
+				}
+
+				openedCnt = 0.0
+				cnt++
+
+				break
+			}
+		}
+
+		for enters[ii]-kk <= 0 {
+			ii++
+		}
+		ii--
+
+	}
+
+	if openedCnt >= 1 {
+		wallet += openedPrice * openedCnt
+	}
+
+	//if wallet > 1000000 {
+	//	fmt.Println(int(100 * (wallet - StartDeposit) / StartDeposit))
+	//	fmt.Println(wallet)
+	//}
+}
+
 type testResultSign uint8
 
 const (
