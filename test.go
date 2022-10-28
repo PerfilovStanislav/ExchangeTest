@@ -127,9 +127,10 @@ func (candleData *CandleData) testPair() {
 	strategyFun := strategyType.getFunction(candleData)
 	testData := getTestData(candleData.Pair)
 
-	proc := runtime.GOMAXPROCS(0)
+	threads := toInt(os.Getenv("threads"))
+	proc := runtime.GOMAXPROCS(threads)
 	tasks := make(chan Strategy, 84)
-	ready := make(chan bool, proc)
+	ready := make(chan bool, threads)
 
 	oneMonthAgoIndex := candleData.getMonthIndex(1)
 	twoMonthsAgoIndex := candleData.getMonthIndex(2)
