@@ -16,15 +16,8 @@ import (
 
 var FavoriteStrategyStorage map[string]FavoriteStrategies
 
-var envLastMonthCnt uint
-var envMinCnt uint
-
-var envMaxLoss float64
-
-var globalMaxSpeed = 0.0
-var globalMaxWallet = 0.0
-var globalMaxSafety = 0.0
-var tpMin, tpMax, tpDiv, tpDif int
+var envMaxLoss, globalMaxSpeed, globalMaxWallet, globalMaxSafety float64
+var envLastMonthCnt, envMinCnt, tpMin, tpMax, tpDiv, tpDif int
 
 //var stat1 = make([]int, len(BarTypes), len(BarTypes))
 //var stat2 = make([]int, len(IndicatorTypes), len(IndicatorTypes))
@@ -191,7 +184,7 @@ func (candleData *CandleData) testPair() {
 }
 
 func (candleData *CandleData) strategyHasEnoughOpens(strategy Strategy, ind1, ind2 []float64, monthIndex, maxTimeIndex int) bool {
-	cnt := uint(0)
+	var cnt int
 
 	for i := monthIndex; i < maxTimeIndex; i++ {
 		if 10000*ind1[i-1]/ind2[i-1] >= float64(10000+strategy.Op) {
@@ -207,17 +200,16 @@ func (candleData *CandleData) strategyHasEnoughOpens(strategy Strategy, ind1, in
 }
 
 func (candleData *CandleData) testLongStrategies(strategy Strategy, ind1, ind2 []float64, testData *FavoriteStrategies, maxTimeIndex int) {
-	for cl := 20; cl < 500; cl += 20 {
-		strategy.Tp = cl
+	for tp := tpMin; tp <= tpMax; tp += tpDif {
+		strategy.Tp = tp
 		candleData.testLongStrategy(strategy, ind1, ind2, testData, maxTimeIndex)
 	}
 }
 
 func (candleData *CandleData) testLongStrategy(strategy Strategy, ind1, ind2 []float64, testData *FavoriteStrategies, maxTimeIndex int) {
 	wallet, maxWallet := StartDeposit, StartDeposit
-	maxLoss, openedCnt, speed, openedPrice := 0.0, 0.0, 0.0, 0.0
-	rnOpen, rnSum := 0, 0
-	cnt, saveStrategy := uint(0), uint(0)
+	var maxLoss, openedCnt, openedPrice float64
+	var cnt, saveStrategy, rnOpen, rnSum int
 
 	lows := candleData.Candles[L]
 	opens := candleData.Candles[O]
@@ -277,13 +269,13 @@ func (candleData *CandleData) testLongStrategy(strategy Strategy, ind1, ind2 []f
 		saveStrategy += 1
 	}
 
-	speed = (wallet - StartDeposit) / float64(rnSum)
-	if speed > globalMaxSpeed*0.996 /* 1000.0*/ {
-		saveStrategy += 2
-		if speed > globalMaxSpeed {
-			globalMaxSpeed = speed
-		}
-	}
+	//speed = (wallet - StartDeposit) / float64(rnSum)
+	//if speed > globalMaxSpeed*0.996 /* 1000.0*/ {
+	//	saveStrategy += 2
+	//	if speed > globalMaxSpeed {
+	//		globalMaxSpeed = speed
+	//	}
+	//}
 
 	safety := wallet / maxLoss
 	if safety > globalMaxSafety*0.990 {
@@ -309,13 +301,13 @@ func (candleData *CandleData) testLongStrategy(strategy Strategy, ind1, ind2 []f
 		//	stat2[strategy.Ind2.IndicatorType-1]++
 		//}
 
-		fmt.Printf("\n %d %s %s %s %s %s %s",
+		fmt.Printf("\n %d %s %s %s %s %s",
 			saveStrategy,
 			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
 			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
 			color.New(color.BgBlue).Sprintf("%4d", cnt),
 			color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
-			color.New(color.FgHiRed).Sprintf("%8.2f", speed),
+			//color.New(color.FgHiRed).Sprintf("%8.2f", speed),
 			strategy.String(),
 			//color.New(color.BgBlue, color.FgYellow).Sprintf("%+v", monthsCnt),
 			//stat1,
@@ -325,7 +317,7 @@ func (candleData *CandleData) testLongStrategy(strategy Strategy, ind1, ind2 []f
 }
 
 func (candleData *CandleData) testShortStrategies(strategy Strategy, ind1, ind2 []float64, testData *FavoriteStrategies, maxTimeIndex int) {
-	for tp := 20; tp < 500; tp += 20 {
+	for tp := tpMin; tp <= tpMax; tp += tpDif {
 		strategy.Tp = tp
 		candleData.testShortStrategy(strategy, ind1, ind2, testData, maxTimeIndex)
 	}
@@ -333,9 +325,8 @@ func (candleData *CandleData) testShortStrategies(strategy Strategy, ind1, ind2 
 
 func (candleData *CandleData) testShortStrategy(strategy Strategy, ind1, ind2 []float64, testData *FavoriteStrategies, maxTimeIndex int) {
 	wallet, maxWallet := StartDeposit, StartDeposit
-	maxLoss, openedCnt, speed, openedPrice := 0.0, 0.0, 0.0, 0.0
-	rnOpen, rnSum := 0, 0
-	cnt, saveStrategy := uint(0), uint(0)
+	var maxLoss, openedCnt, openedPrice float64
+	var cnt, saveStrategy, rnOpen, rnSum int
 
 	highs := candleData.Candles[H]
 	opens := candleData.Candles[O]
@@ -388,13 +379,13 @@ func (candleData *CandleData) testShortStrategy(strategy Strategy, ind1, ind2 []
 		saveStrategy += 1
 	}
 
-	speed = (wallet - StartDeposit) / float64(rnSum)
-	if speed > globalMaxSpeed*0.996 /* 1000.0*/ {
-		saveStrategy += 2
-		if speed > globalMaxSpeed {
-			globalMaxSpeed = speed
-		}
-	}
+	//speed = (wallet - StartDeposit) / float64(rnSum)
+	//if speed > globalMaxSpeed*0.996 /* 1000.0*/ {
+	//	saveStrategy += 2
+	//	if speed > globalMaxSpeed {
+	//		globalMaxSpeed = speed
+	//	}
+	//}
 
 	safety := wallet / maxLoss
 	if safety > globalMaxSafety*0.990 {
@@ -413,13 +404,13 @@ func (candleData *CandleData) testShortStrategy(strategy Strategy, ind1, ind2 []
 			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
 		}
 
-		fmt.Printf("\n %d %s %s %s %s %s %s",
+		fmt.Printf("\n %d %s %s %s %s %s",
 			saveStrategy,
 			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
 			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
 			color.New(color.BgBlue).Sprintf("%4d", cnt),
 			color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
-			color.New(color.FgHiRed).Sprintf("%8.2f", speed),
+			//color.New(color.FgHiRed).Sprintf("%8.2f", speed),
 			strategy.String(),
 			//color.New(color.BgBlue, color.FgYellow).Sprintf("%+v", monthsCnt),
 			//stat1,
@@ -443,11 +434,9 @@ _tp:
 }
 
 func (candleData *CandleData) testLongSlStrategy(strategy Strategy, ind1, ind2 []float64, testData *FavoriteStrategies, maxTimeIndex int) testResultSign {
-	slCnt := 0
 	wallet, maxWallet := StartDeposit, StartDeposit
-	maxLoss, openedCnt, speed, openedPrice, sl, tp := 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-	rnOpen, rnSum := 0, 0
-	cnt, saveStrategy := uint(0), uint(0)
+	var maxLoss, openedCnt, openedPrice, sl, tp float64
+	var cnt, slCnt, saveStrategy, rnOpen, rnSum int
 
 	candles := candleData.Candles
 	lows := candles[L]
@@ -528,13 +517,13 @@ func (candleData *CandleData) testLongSlStrategy(strategy Strategy, ind1, ind2 [
 		saveStrategy += 1
 	}
 
-	speed = (wallet - StartDeposit) / float64(rnSum)
-	if speed > globalMaxSpeed*0.996 /* 1000.0*/ {
-		saveStrategy += 2
-		if speed > globalMaxSpeed {
-			globalMaxSpeed = speed
-		}
-	}
+	//speed = (wallet - StartDeposit) / float64(rnSum)
+	//if speed > globalMaxSpeed*0.996 /* 1000.0*/ {
+	//	saveStrategy += 2
+	//	if speed > globalMaxSpeed {
+	//		globalMaxSpeed = speed
+	//	}
+	//}
 
 	safety := wallet / maxLoss
 	if safety > globalMaxSafety*0.990 {
@@ -545,13 +534,13 @@ func (candleData *CandleData) testLongSlStrategy(strategy Strategy, ind1, ind2 [
 	}
 
 	if saveStrategy > 0 {
-		fmt.Printf("\n %d %s %s %s %s %s %s",
+		fmt.Printf("\n %d %s %s %s %s %s",
 			saveStrategy,
 			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
 			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
 			color.New(color.BgBlue).Sprintf("%4d", cnt),
 			color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
-			color.New(color.FgHiRed).Sprintf("%8.2f", speed),
+			//color.New(color.FgHiRed).Sprintf("%8.2f", speed),
 			strategy.String(),
 		)
 
@@ -586,11 +575,9 @@ _tp:
 }
 
 func (candleData *CandleData) testShortSlStrategy(strategy Strategy, ind1, ind2 []float64, testData *FavoriteStrategies, maxTimeIndex int) testResultSign {
-	slCnt := 0
 	wallet, maxWallet := StartDeposit, StartDeposit
-	maxLoss, openedCnt, speed, openedPrice, sl, tp := 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-	rnOpen, rnSum := 0, 0
-	cnt, saveStrategy := uint(0), uint(0)
+	var maxLoss, openedCnt, openedPrice, sl, tp float64
+	var cnt, slCnt, saveStrategy, rnOpen, rnSum int
 
 	candles := candleData.Candles
 	lows := candles[L]
@@ -671,13 +658,13 @@ func (candleData *CandleData) testShortSlStrategy(strategy Strategy, ind1, ind2 
 		saveStrategy += 1
 	}
 
-	speed = (wallet - StartDeposit) / float64(rnSum)
-	if speed > globalMaxSpeed*0.996 /* 1000.0*/ {
-		saveStrategy += 2
-		if speed > globalMaxSpeed {
-			globalMaxSpeed = speed
-		}
-	}
+	//speed = (wallet - StartDeposit) / float64(rnSum)
+	//if speed > globalMaxSpeed*0.996 /* 1000.0*/ {
+	//	saveStrategy += 2
+	//	if speed > globalMaxSpeed {
+	//		globalMaxSpeed = speed
+	//	}
+	//}
 
 	safety := wallet / maxLoss
 	if safety > globalMaxSafety*0.990 {
@@ -688,13 +675,13 @@ func (candleData *CandleData) testShortSlStrategy(strategy Strategy, ind1, ind2 
 	}
 
 	if saveStrategy > 0 {
-		fmt.Printf("\n %d %s %s %s %s %s %s",
+		fmt.Printf("\n %d %s %s %s %s %s",
 			saveStrategy,
 			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
 			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
 			color.New(color.BgBlue).Sprintf("%4d", cnt),
 			color.New(color.FgHiYellow).Sprintf("%5d", rnSum),
-			color.New(color.FgHiRed).Sprintf("%8.2f", speed),
+			//color.New(color.FgHiRed).Sprintf("%8.2f", speed),
 			strategy.String(),
 		)
 
@@ -712,74 +699,6 @@ func (candleData *CandleData) testShortSlStrategy(strategy Strategy, ind1, ind2 
 	}
 
 	return TestMaxLoss
-}
-
-func (candleData *CandleData) test(strategy Strategy, enters []int, testData *FavoriteStrategies, maxTimeIndex int) {
-	slCnt := 0
-	wallet, maxWallet := StartDeposit, StartDeposit
-	openedCnt, openedPrice, sl, tp := 0.0, 0.0, 0.0, 0.0
-	cnt := uint(0)
-
-	candles := candleData.Candles
-	lows := candles[L]
-	opens := candles[O]
-	highs := candles[H]
-	for i := 0; i < len(enters)-1; i++ {
-		enter := enters[i]
-
-		openedPrice = opens[enter]
-		openedCnt = wallet / openedPrice
-		wallet -= openedPrice * openedCnt
-
-		sl = float64(10000+strategy.Sl) * openedPrice / 10000
-		tp = float64(10000-strategy.Tp) * openedPrice / 10000
-
-		var lastK int
-		for k := enter; k < maxTimeIndex; k++ {
-			h := highs[k]
-			lastK = k
-
-			// --
-			if h >= sl {
-				slCnt++
-				wallet += (2*openedPrice - sl) * openedCnt * Commission
-
-				openedCnt = 0.0
-				cnt++
-				break
-			}
-
-			// --
-			l := lows[k]
-			if l <= tp {
-				wallet += (2*openedPrice - tp) * openedCnt * Commission
-
-				if wallet > maxWallet {
-					maxWallet = wallet
-				}
-
-				openedCnt = 0.0
-				cnt++
-
-				break
-			}
-		}
-
-		for enters[i]-lastK <= 0 {
-			i++
-		}
-		i--
-
-	}
-
-	if openedCnt >= 1 {
-		wallet += openedPrice * openedCnt
-	}
-
-	//if wallet > 1000000 {
-	//	fmt.Println(int(100 * (wallet - StartDeposit) / StartDeposit))
-	//	fmt.Println(wallet)
-	//}
 }
 
 type testResultSign uint8

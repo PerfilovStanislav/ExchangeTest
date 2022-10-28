@@ -421,7 +421,7 @@ func (strategy Strategy) String() string {
 		color.New(color.FgBlue).Sprintf("%s", strategy.Pair),
 		color.New(color.BgHiBlue, color.FgBlack).Sprintf("%3d", strategy.Op),
 		color.New(color.BgHiGreen, color.FgBlack).Sprintf("%3d", strategy.Tp),
-		color.New(color.BgHiRed, color.FgBlack).Sprintf("%3d", strategy.Sl),
+		color.New(color.BgHiRed, color.FgBlack).Sprintf("%4d", strategy.Sl),
 		strategy.Ind1.String(),
 		strategy.Ind2.String(),
 	)

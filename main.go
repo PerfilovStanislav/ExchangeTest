@@ -15,7 +15,7 @@ var apiHandler ApiInterface
 
 var resolution string
 
-const StartDeposit = float64(100000.0)
+const StartDeposit = float64(1000000.0)
 
 const Commission = float64(0.98)
 
@@ -38,8 +38,8 @@ func init() {
 		log.Fatal("NO HANDLER")
 	}
 	resolution = os.Getenv("resolution")
-	envLastMonthCnt = toUint(os.Getenv("min_last_month_cnt"))
-	envMinCnt = toUint(os.Getenv("min_cnt"))
+	envLastMonthCnt = toInt(os.Getenv("min_last_month_cnt"))
+	envMinCnt = toInt(os.Getenv("min_cnt"))
 	envMaxLoss = s2f(os.Getenv("max_loss"))
 	years = toInt(os.Getenv("years"))
 	months = toInt(os.Getenv("months"))
