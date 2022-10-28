@@ -724,20 +724,20 @@ func (candleData *CandleData) test(strategy Strategy, enters []int, testData *Fa
 	lows := candles[L]
 	opens := candles[O]
 	highs := candles[H]
-	for ii := 0; ii < len(enters)-1; ii++ {
-		i := enters[ii]
+	for i := 0; i < len(enters)-1; i++ {
+		enter := enters[i]
 
-		openedPrice = opens[i]
+		openedPrice = opens[enter]
 		openedCnt = wallet / openedPrice
 		wallet -= openedPrice * openedCnt
 
 		sl = float64(10000+strategy.Sl) * openedPrice / 10000
 		tp = float64(10000-strategy.Tp) * openedPrice / 10000
 
-		var kk int
-		for k := i; k < maxTimeIndex; k++ {
+		var lastK int
+		for k := enter; k < maxTimeIndex; k++ {
 			h := highs[k]
-			kk = k
+			lastK = k
 
 			// --
 			if h >= sl {
@@ -765,10 +765,10 @@ func (candleData *CandleData) test(strategy Strategy, enters []int, testData *Fa
 			}
 		}
 
-		for enters[ii]-kk <= 0 {
-			ii++
+		for enters[i]-lastK <= 0 {
+			i++
 		}
-		ii--
+		i--
 
 	}
 
