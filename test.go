@@ -188,7 +188,7 @@ func (candleData *CandleData) strategyHasEnoughOpens(strategy Strategy, ind1, in
 	var cnt int
 
 	for i := monthIndex; i < maxTimeIndex; i++ {
-		if 10000*ind1[i-1]/ind2[i-1] >= float64(10000+strategy.Op) {
+		if 10000*ind1[i-1]/ind2[i-1] > float64(10000+strategy.Op) {
 			cnt++
 			if cnt == envLastMonthCnt {
 				return true
@@ -217,7 +217,7 @@ func (candleData *CandleData) testLongStrategy(strategy Strategy, ind1, ind2 []f
 	for i := 1; i < maxTimeIndex; i++ {
 		o := opens[i]
 		if openedCnt == 0 {
-			if 10000*ind1[i-1]/ind2[i-1] >= float64(10000+strategy.Op) {
+			if 10000*ind1[i-1]/ind2[i-1] > float64(10000+strategy.Op) {
 				openedPrice = o
 				openedCnt = wallet / openedPrice
 				wallet -= openedPrice * openedCnt
@@ -334,7 +334,7 @@ func (candleData *CandleData) testShortStrategy(strategy Strategy, ind1, ind2 []
 	for i := 1; i < maxTimeIndex; i++ {
 		o := opens[i]
 		if openedCnt == 0 {
-			if 10000*ind1[i-1]/ind2[i-1] >= float64(10000+strategy.Op) {
+			if 10000*ind1[i-1]/ind2[i-1] > float64(10000+strategy.Op) {
 				openedPrice = o
 				openedCnt = wallet / openedPrice
 				wallet -= openedPrice * openedCnt
@@ -446,7 +446,7 @@ func (candleData *CandleData) testLongSlStrategy(strategy Strategy, ind1, ind2 [
 	for i := 1; i < maxTimeIndex; i++ {
 		o := opens[i]
 		if openedCnt == 0 {
-			if 10000*ind1[i-1]/ind2[i-1] >= float64(10000+strategy.Op) {
+			if 10000*ind1[i-1]/ind2[i-1] > float64(10000+strategy.Op) {
 				openedPrice = o
 				openedCnt = wallet / openedPrice
 				wallet -= openedPrice * openedCnt
@@ -587,7 +587,7 @@ func (candleData *CandleData) testShortSlStrategy(strategy Strategy, ind1, ind2 
 	for i := 1; i < maxTimeIndex; i++ {
 		o := opens[i]
 		if openedCnt == 0 {
-			if 10000*ind1[i-1]/ind2[i-1] >= float64(10000+strategy.Op) {
+			if 10000*ind1[i-1]/ind2[i-1] > float64(10000+strategy.Op) {
 				openedPrice = o
 				openedCnt = wallet / openedPrice
 				wallet -= openedPrice * openedCnt
