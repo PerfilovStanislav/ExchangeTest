@@ -1,0 +1,16 @@
+ 5    57% 18.8%   80  2390 { long ALGO_USDT  16 148    0 |  1   C 15 |  2   H 10 }
+ 5    75% 19.7%   81  3600 { long ALGO_USDT  12 164    0 |  1   C 15 |  2   H 10 }
+ 5    75% 18.8%   79  2514 { long ALGO_USDT  16 164    0 |  1   C 15 |  2   H 10 }
+ 5    88% 18.8%   76  2535 { long ALGO_USDT  16 180    0 |  1   C 15 |  2   H 10 }
+ 5   104% 18.9%   80  4038 { long ALGO_USDT   0 196    0 |  1   C 15 |  2   H 11 }
+ 4    71% 15.6%   75  1738 { long ALGO_USDT  40 164    0 |  3   C 24 |  5   H 14 }
+ 4    69% 15.6%   84  1838 { long ALGO_USDT  36 164    0 |  3   C 24 |  5   H 14 }
+ 5   110% 15.6%   84  2008 { long ALGO_USDT  36 180    0 |  3   C 24 |  5   H 14 }
+ 1   112% 18.3%   78  2889 { long ALGO_USDT  20 196    0 |  3  LO 45 | 11 LOH 56 }
+ 1   124% 18.3%   78  2925 { long ALGO_USDT  20 212    0 |  3  LO 45 | 11 LOH 56 }
+ 1   130% 18.3%   79  2963 { long ALGO_USDT  24 212    0 |  3  LO 44 | 11 LOH 57 }
+ 1   152% 20.0%   80  2022 { long ALGO_USDT  20 212    0 |  8  LO 26 |  6   C 32 }
+ 4   125% 15.7%   75  2063 { long ALGO_USDT  48 212    0 | 11 LOH 40 |  5   H 69 }
+ 4   125% 15.7%   75  2063 { long ALGO_USDT  48 212    0 | 11 LOH 40 |  5   H 66 }
+ 4   125% 15.7%   75  2063 { long ALGO_USDT  48 212    0 | 11 LOH 40 |  5   H 68 }
+ 4   125% 15.7%   75  2063 { long ALGO_USDT  48 212    0 | 11 LOH 40 |  5   H 67 }uncompressed size (bytes):  1194
