@@ -136,6 +136,11 @@ func getCandleData(pair string) *CandleData {
 }
 
 func (candleData *CandleData) restore() bool {
+	_, ok := CandleStorage[candleData.Pair]
+	if ok {
+		return true
+	}
+
 	fileName := candleData.getFileName()
 	if !fileExists(fileName) {
 		return false
@@ -407,18 +412,10 @@ func (indicator Indicator) getValue(data *CandleData, i int) float64 {
 	return indicator.IndicatorType.getFunction(data)(indicator.Coef, i, indicator.BarType)
 }
 
-func showStrategies(strategies []Strategy) string {
-	var str string
-	for _, strategy := range strategies {
-		str += strategy.String()
-	}
-	return str
-}
-
 func (strategy Strategy) String() string {
 	return fmt.Sprintf("{ %s %s %s %s %s | %s | %s }",
-		color.New(color.BgYellow, color.FgBlack).Sprintf("%s", strategy.Type),
 		color.New(color.FgBlue).Sprintf("%s", strategy.Pair),
+		color.New(color.BgYellow, color.FgBlack).Sprintf("%s", strategy.Type),
 		color.New(color.BgHiBlue, color.FgBlack).Sprintf("%3d", strategy.Op),
 		color.New(color.BgHiGreen, color.FgBlack).Sprintf("%3d", strategy.Tp),
 		color.New(color.BgHiRed, color.FgBlack).Sprintf("%4d", strategy.Sl),
