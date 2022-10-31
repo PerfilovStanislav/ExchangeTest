@@ -80,7 +80,7 @@ func (favoriteStrategies *FavoriteStrategies) backup() {
 }
 
 func (favoriteStrategies *FavoriteStrategies) getFileName() string {
-	return fmt.Sprintf("%s_tests_%s_%s.dat", exchange, favoriteStrategies.Pair, resolution)
+	return fmt.Sprintf("%s_tests_%s_%s_%s.dat", exchange, favoriteStrategies.Pair, resolution, os.Getenv("strategy_type"))
 }
 
 func (favoriteStrategies *FavoriteStrategies) saveToStorage() {
