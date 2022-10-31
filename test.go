@@ -696,13 +696,13 @@ func prepareTestPairs(envTestPairs string) {
 		candleData := getCandleData(pair)
 		apiHandler.downloadPairCandles(candleData)
 
-		testData := getTestData(pair)
-		if !testData.restore() {
+		favoriteStrategies := getTestData(pair)
+		if !favoriteStrategies.restore() {
 			candleData.testPair()
-			tgBot.sendTestFile(testData.getFileName())
+			tgBot.sendTestFile(favoriteStrategies.getFileName())
 		} else {
-			showStrategies(testData.StrategiesMaxSafety)
-			showStrategies(testData.StrategiesMaxWallet)
+			showStrategies(favoriteStrategies.StrategiesMaxSafety)
+			showStrategies(favoriteStrategies.StrategiesMaxWallet)
 		}
 	}
 }
