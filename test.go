@@ -16,10 +16,10 @@ import (
 
 var FavoriteStrategyStorage map[string]FavoriteStrategies
 
-var envMaxLoss /*, globalMaxSpeed*/, globalMaxWallet, globalMaxSafety float64
+var envMaxLoss /*, globalMaxSpeed*/, globalMaxWallet, globalMaxSafety, globalMaxProfitCnt float64
 var envLastMonthCnt, envMinCnt int
-var tpMin, tpMax, tpDiv, tpDif int
-var opMin, opMax, opDiv, opDif int
+var tpMin, tpMax, tpDif int
+var opMin, opMax, opDif int
 
 //var stat1 = make([]int, len(BarTypes), len(BarTypes))
 //var stat2 = make([]int, len(IndicatorTypes), len(IndicatorTypes))
@@ -29,6 +29,7 @@ type FavoriteStrategies struct {
 	StrategiesMaxWallet []Strategy
 	//StrategiesMaxSpeed  []Strategy
 	StrategiesMaxSafety []Strategy
+	StrategiesMaxCnt    []Strategy
 	CandleData          *CandleData
 }
 
@@ -74,6 +75,7 @@ func (favoriteStrategies *FavoriteStrategies) restore() bool {
 func (favoriteStrategies *FavoriteStrategies) backup() {
 	favoriteStrategies.StrategiesMaxSafety = favoriteStrategies.StrategiesMaxSafety[maxInt(len(favoriteStrategies.StrategiesMaxSafety)-200, 0):]
 	favoriteStrategies.StrategiesMaxWallet = favoriteStrategies.StrategiesMaxWallet[maxInt(len(favoriteStrategies.StrategiesMaxWallet)-10, 0):]
+	favoriteStrategies.StrategiesMaxCnt = favoriteStrategies.StrategiesMaxCnt[maxInt(len(favoriteStrategies.StrategiesMaxCnt)-20, 0):]
 	//favoriteStrategies.StrategiesMaxSpeed = favoriteStrategies.StrategiesMaxSpeed[maxInt(len(favoriteStrategies.StrategiesMaxSpeed)-100, 0):]
 	dataOut := EncodeToBytes(favoriteStrategies)
 	_ = os.WriteFile(favoriteStrategies.getFileName(), dataOut, 0644)
@@ -294,23 +296,25 @@ func (candleData *CandleData) testLongStrategy(strategy Strategy, ind1, ind2 []f
 		}
 	}
 
+	profit := (wallet - StartDeposit) / StartDeposit
+	maxProfitCnt := profit * float64(cnt)
+	if profit > maxLoss*3 && maxProfitCnt > globalMaxProfitCnt {
+		globalMaxProfitCnt = maxProfitCnt
+		saveStrategy += 8
+	}
+
 	if saveStrategy > 0 {
 		if saveStrategy&4 == 4 {
 			testData.StrategiesMaxSafety = append(testData.StrategiesMaxSafety, strategy)
 		} else if saveStrategy&1 == 1 {
 			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
+		} else if saveStrategy&8 == 8 {
+			testData.StrategiesMaxCnt = append(testData.StrategiesMaxCnt, strategy)
 		}
 
-		//if (wallet-StartDeposit)/StartDeposit >= 0.2 {
-		//	stat1[strategy.Ind1.BarType]++
-		//	stat1[strategy.Ind2.BarType]++
-		//	stat2[strategy.Ind1.IndicatorType-1]++
-		//	stat2[strategy.Ind2.IndicatorType-1]++
-		//}
-
-		fmt.Printf("\n %d %s %s %s %s",
+		fmt.Printf("\n %2d %s %s %s %s",
 			saveStrategy,
-			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
+			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*profit)),
 			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
 			color.New(color.BgBlue).Sprintf("%4d", cnt),
 			strategy.String(),
@@ -399,16 +403,25 @@ func (candleData *CandleData) testShortStrategy(strategy Strategy, ind1, ind2 []
 		}
 	}
 
+	profit := (wallet - StartDeposit) / StartDeposit
+	maxProfitCnt := profit * float64(cnt)
+	if profit > maxLoss*3 && maxProfitCnt > globalMaxProfitCnt {
+		globalMaxProfitCnt = maxProfitCnt
+		saveStrategy += 8
+	}
+
 	if saveStrategy > 0 {
 		if saveStrategy&4 == 4 {
 			testData.StrategiesMaxSafety = append(testData.StrategiesMaxSafety, strategy)
 		} else if saveStrategy&1 == 1 {
 			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
+		} else if saveStrategy&8 == 8 {
+			testData.StrategiesMaxCnt = append(testData.StrategiesMaxCnt, strategy)
 		}
 
-		fmt.Printf("\n %d %s %s %s %s",
+		fmt.Printf("\n %2d %s %s %s %s",
 			saveStrategy,
-			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
+			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*profit)),
 			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
 			color.New(color.BgBlue).Sprintf("%4d", cnt),
 			strategy.String(),
@@ -529,10 +542,17 @@ func (candleData *CandleData) testLongSlStrategy(strategy Strategy, ind1, ind2 [
 		}
 	}
 
+	profit := (wallet - StartDeposit) / StartDeposit
+	maxProfitCnt := profit * float64(cnt)
+	if profit > maxLoss*3 && maxProfitCnt > globalMaxProfitCnt {
+		globalMaxProfitCnt = maxProfitCnt
+		saveStrategy += 8
+	}
+
 	if saveStrategy > 0 {
-		fmt.Printf("\n %d %s %s %s %s",
+		fmt.Printf("\n %2d %s %s %s %s",
 			saveStrategy,
-			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
+			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*profit)),
 			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
 			color.New(color.BgBlue).Sprintf("%4d", cnt),
 			strategy.String(),
@@ -542,6 +562,8 @@ func (candleData *CandleData) testLongSlStrategy(strategy Strategy, ind1, ind2 [
 			testData.StrategiesMaxSafety = append(testData.StrategiesMaxSafety, strategy)
 		} else if saveStrategy&1 == 1 {
 			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
+		} else if saveStrategy&8 == 8 {
+			testData.StrategiesMaxCnt = append(testData.StrategiesMaxCnt, strategy)
 		}
 
 		if slCnt == 0 {
@@ -663,10 +685,17 @@ func (candleData *CandleData) testShortSlStrategy(strategy Strategy, ind1, ind2 
 		}
 	}
 
+	profit := (wallet - StartDeposit) / StartDeposit
+	maxProfitCnt := profit * float64(cnt)
+	if profit > maxLoss*3 && maxProfitCnt > globalMaxProfitCnt {
+		globalMaxProfitCnt = maxProfitCnt
+		saveStrategy += 8
+	}
+
 	if saveStrategy > 0 {
-		fmt.Printf("\n %d %s %s %s %s",
+		fmt.Printf("\n %2d %s %s %s %s",
 			saveStrategy,
-			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*(wallet-StartDeposit)/StartDeposit)),
+			color.New(color.FgHiGreen).Sprintf("%5d%%", int(100*profit)),
 			color.New(color.FgHiRed).Sprintf("%4.1f%%", (maxLoss)*100.0),
 			color.New(color.BgBlue).Sprintf("%4d", cnt),
 			strategy.String(),
@@ -676,6 +705,8 @@ func (candleData *CandleData) testShortSlStrategy(strategy Strategy, ind1, ind2 
 			testData.StrategiesMaxSafety = append(testData.StrategiesMaxSafety, strategy)
 		} else if saveStrategy&1 == 1 {
 			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
+		} else if saveStrategy&8 == 8 {
+			testData.StrategiesMaxCnt = append(testData.StrategiesMaxCnt, strategy)
 		}
 
 		if slCnt == 0 {
@@ -708,6 +739,7 @@ func prepareTestPairs(envTestPairs string) {
 		} else {
 			showStrategies(favoriteStrategies.StrategiesMaxSafety)
 			showStrategies(favoriteStrategies.StrategiesMaxWallet)
+			showStrategies(favoriteStrategies.StrategiesMaxCnt)
 		}
 	}
 }
@@ -719,7 +751,7 @@ func showStrategies(strategies []Strategy) {
 }
 
 func (strategy Strategy) show() {
-	globalMaxWallet, globalMaxSafety, envMinCnt = 0, 0, 0
+	globalMaxWallet, globalMaxSafety, globalMaxProfitCnt, envMinCnt = 0, 0, 0, 0
 	candleData := strategy.getCandleData()
 	apiHandler.downloadPairCandles(candleData)
 	ind1 := candleData.getIndicatorValue(strategy.Ind1)
