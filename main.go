@@ -49,11 +49,7 @@ func init() {
 		tps := strings.Split(envTp, ";")
 		tpMin = int(s2i(tps[0]))
 		tpMax = int(s2i(tps[1]))
-		tpDiv = int(s2i(tps[2]))
-		tpDif = (tpMax - tpMin) / tpDiv
-		if tpDif < 1 {
-			tpDif = 1
-		}
+		tpDif = int(s2i(tps[2]))
 	}
 
 	{
@@ -61,11 +57,7 @@ func init() {
 		tps := strings.Split(envTp, ";")
 		opMin = int(s2i(tps[0]))
 		opMax = int(s2i(tps[1]))
-		opDiv = int(s2i(tps[2]))
-		opDif = (opMax - opMin) / opDiv
-		if opDif < 1 {
-			opDif = 1
-		}
+		opDif = int(s2i(tps[2]))
 	}
 
 	tgBot.init()

@@ -80,7 +80,12 @@ func (favoriteStrategies *FavoriteStrategies) backup() {
 }
 
 func (favoriteStrategies *FavoriteStrategies) getFileName() string {
-	return fmt.Sprintf("%s_tests_%s_%s_%s.dat", exchange, favoriteStrategies.Pair, resolution, os.Getenv("strategy_type"))
+	return fmt.Sprintf("%s_tests_%s_%s_%s.dat",
+		exchange,
+		favoriteStrategies.Pair,
+		resolution,
+		os.Getenv("strategy_type"),
+	)
 }
 
 func (favoriteStrategies *FavoriteStrategies) saveToStorage() {
@@ -714,7 +719,7 @@ func showStrategies(strategies []Strategy) {
 }
 
 func (strategy Strategy) show() {
-	globalMaxWallet, globalMaxSafety = 0, 0
+	globalMaxWallet, globalMaxSafety, envMinCnt = 0, 0, 0
 	candleData := strategy.getCandleData()
 	apiHandler.downloadPairCandles(candleData)
 	ind1 := candleData.getIndicatorValue(strategy.Ind1)
