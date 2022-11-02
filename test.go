@@ -16,7 +16,7 @@ import (
 
 var FavoriteStrategyStorage map[string]FavoriteStrategies
 
-var envMaxLoss /*, globalMaxSpeed*/, globalMaxWallet, globalMaxSafety, globalMaxProfitCnt float64
+var envMaxLoss /*, globalMaxSpeed*/, globalMaxWallet, globalMaxSafety, globalMaxProfitCnt, globalMaxSafetyCnt float64
 var envLastMonthCnt, envMinCnt int
 var tpMin, tpMax, tpDif int
 var opMin, opMax, opDif int
@@ -28,9 +28,10 @@ type FavoriteStrategies struct {
 	Pair                string
 	StrategiesMaxWallet []Strategy
 	//StrategiesMaxSpeed  []Strategy
-	StrategiesMaxSafety []Strategy
-	StrategiesMaxCnt    []Strategy
-	CandleData          *CandleData
+	StrategiesMaxSafety    []Strategy
+	StrategiesMaxCnt       []Strategy
+	StrategiesMaxSafetyCnt []Strategy
+	CandleData             *CandleData
 }
 
 var TestBarTypes = []BarType{
@@ -76,6 +77,7 @@ func (favoriteStrategies *FavoriteStrategies) backup() {
 	favoriteStrategies.StrategiesMaxSafety = favoriteStrategies.StrategiesMaxSafety[maxInt(len(favoriteStrategies.StrategiesMaxSafety)-200, 0):]
 	favoriteStrategies.StrategiesMaxWallet = favoriteStrategies.StrategiesMaxWallet[maxInt(len(favoriteStrategies.StrategiesMaxWallet)-10, 0):]
 	favoriteStrategies.StrategiesMaxCnt = favoriteStrategies.StrategiesMaxCnt[maxInt(len(favoriteStrategies.StrategiesMaxCnt)-20, 0):]
+	favoriteStrategies.StrategiesMaxSafetyCnt = favoriteStrategies.StrategiesMaxSafetyCnt[maxInt(len(favoriteStrategies.StrategiesMaxSafetyCnt)-50, 0):]
 	//favoriteStrategies.StrategiesMaxSpeed = favoriteStrategies.StrategiesMaxSpeed[maxInt(len(favoriteStrategies.StrategiesMaxSpeed)-100, 0):]
 	dataOut := EncodeToBytes(favoriteStrategies)
 	_ = os.WriteFile(favoriteStrategies.getFileName(), dataOut, 0644)
@@ -303,6 +305,12 @@ func (candleData *CandleData) testLongStrategy(strategy Strategy, ind1, ind2 []f
 		saveStrategy += 8
 	}
 
+	maxSafetyCnt := safety * float64(cnt)
+	if maxSafetyCnt > globalMaxSafetyCnt {
+		globalMaxSafetyCnt = maxSafetyCnt
+		saveStrategy += 16
+	}
+
 	if saveStrategy > 0 {
 		if saveStrategy&4 == 4 {
 			testData.StrategiesMaxSafety = append(testData.StrategiesMaxSafety, strategy)
@@ -310,6 +318,8 @@ func (candleData *CandleData) testLongStrategy(strategy Strategy, ind1, ind2 []f
 			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
 		} else if saveStrategy&8 == 8 {
 			testData.StrategiesMaxCnt = append(testData.StrategiesMaxCnt, strategy)
+		} else if saveStrategy&16 == 16 {
+			testData.StrategiesMaxSafetyCnt = append(testData.StrategiesMaxSafetyCnt, strategy)
 		}
 
 		fmt.Printf("\n %2d %s %s %s %s",
@@ -410,6 +420,12 @@ func (candleData *CandleData) testShortStrategy(strategy Strategy, ind1, ind2 []
 		saveStrategy += 8
 	}
 
+	maxSafetyCnt := safety * float64(cnt)
+	if maxSafetyCnt > globalMaxSafetyCnt {
+		globalMaxSafetyCnt = maxSafetyCnt
+		saveStrategy += 16
+	}
+
 	if saveStrategy > 0 {
 		if saveStrategy&4 == 4 {
 			testData.StrategiesMaxSafety = append(testData.StrategiesMaxSafety, strategy)
@@ -417,6 +433,8 @@ func (candleData *CandleData) testShortStrategy(strategy Strategy, ind1, ind2 []
 			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
 		} else if saveStrategy&8 == 8 {
 			testData.StrategiesMaxCnt = append(testData.StrategiesMaxCnt, strategy)
+		} else if saveStrategy&16 == 16 {
+			testData.StrategiesMaxSafetyCnt = append(testData.StrategiesMaxSafetyCnt, strategy)
 		}
 
 		fmt.Printf("\n %2d %s %s %s %s",
@@ -549,6 +567,12 @@ func (candleData *CandleData) testLongSlStrategy(strategy Strategy, ind1, ind2 [
 		saveStrategy += 8
 	}
 
+	maxSafetyCnt := safety * float64(cnt)
+	if maxSafetyCnt > globalMaxSafetyCnt {
+		globalMaxSafetyCnt = maxSafetyCnt
+		saveStrategy += 16
+	}
+
 	if saveStrategy > 0 {
 		fmt.Printf("\n %2d %s %s %s %s",
 			saveStrategy,
@@ -564,6 +588,8 @@ func (candleData *CandleData) testLongSlStrategy(strategy Strategy, ind1, ind2 [
 			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
 		} else if saveStrategy&8 == 8 {
 			testData.StrategiesMaxCnt = append(testData.StrategiesMaxCnt, strategy)
+		} else if saveStrategy&16 == 16 {
+			testData.StrategiesMaxSafetyCnt = append(testData.StrategiesMaxSafetyCnt, strategy)
 		}
 
 		if slCnt == 0 {
@@ -692,6 +718,12 @@ func (candleData *CandleData) testShortSlStrategy(strategy Strategy, ind1, ind2 
 		saveStrategy += 8
 	}
 
+	maxSafetyCnt := safety * float64(cnt)
+	if maxSafetyCnt > globalMaxSafetyCnt {
+		globalMaxSafetyCnt = maxSafetyCnt
+		saveStrategy += 16
+	}
+
 	if saveStrategy > 0 {
 		fmt.Printf("\n %2d %s %s %s %s",
 			saveStrategy,
@@ -707,6 +739,8 @@ func (candleData *CandleData) testShortSlStrategy(strategy Strategy, ind1, ind2 
 			testData.StrategiesMaxWallet = append(testData.StrategiesMaxWallet, strategy)
 		} else if saveStrategy&8 == 8 {
 			testData.StrategiesMaxCnt = append(testData.StrategiesMaxCnt, strategy)
+		} else if saveStrategy&16 == 16 {
+			testData.StrategiesMaxSafetyCnt = append(testData.StrategiesMaxSafetyCnt, strategy)
 		}
 
 		if slCnt == 0 {
@@ -740,6 +774,7 @@ func prepareTestPairs(envTestPairs string) {
 			showStrategies(favoriteStrategies.StrategiesMaxSafety)
 			showStrategies(favoriteStrategies.StrategiesMaxWallet)
 			showStrategies(favoriteStrategies.StrategiesMaxCnt)
+			showStrategies(favoriteStrategies.StrategiesMaxSafetyCnt)
 		}
 	}
 }
@@ -751,7 +786,7 @@ func showStrategies(strategies []Strategy) {
 }
 
 func (strategy Strategy) show() {
-	globalMaxWallet, globalMaxSafety, globalMaxProfitCnt, envMinCnt = 0, 0, 0, 0
+	globalMaxWallet, globalMaxSafety, globalMaxProfitCnt, globalMaxSafetyCnt, envMinCnt = 0, 0, 0, 0, 0
 	candleData := strategy.getCandleData()
 	apiHandler.downloadPairCandles(candleData)
 	ind1 := candleData.getIndicatorValue(strategy.Ind1)
