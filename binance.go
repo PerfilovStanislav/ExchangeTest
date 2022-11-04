@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	binanceApi "github.com/adshao/go-binance/v2"
+	binanceApi "github.com/adshao/go-binance/v2/futures"
 	"os"
 	"strings"
 	"time"

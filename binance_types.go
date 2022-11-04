@@ -1,7 +1,7 @@
 package main
 
 import (
-	binanceApi "github.com/adshao/go-binance/v2"
+	binanceApi "github.com/adshao/go-binance/v2/futures"
 	"time"
 )
 
