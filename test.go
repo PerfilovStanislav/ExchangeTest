@@ -137,6 +137,7 @@ func (strategyType StrategyType) getTestStrategyFunction(candleData *CandleData)
 }
 
 func (candleData *CandleData) testPair() {
+	fmt.Println(candleData.Pair)
 	strategyType := NoStrategyType.value(os.Getenv("strategy_type"))
 	strategyFun := strategyType.getTestPairFunction(candleData)
 	testData := getTestData(candleData.Pair)

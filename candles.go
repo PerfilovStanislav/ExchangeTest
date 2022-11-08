@@ -325,7 +325,7 @@ func (candleData *CandleData) fillIndicators() {
 	}
 
 	for n := 3; n <= 70; n++ {
-		fmt.Println(n)
+		fmt.Printf("%d ", n)
 		for _, indicatorType := range IndicatorTypes {
 			candleData.Indicators[indicatorType][n] = make(map[BarType][]float64)
 		}
