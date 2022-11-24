@@ -781,13 +781,13 @@ func prepareTestPairs(envTestPairs string) {
 }
 
 func showStrategies(strategies []Strategy) {
+	globalMaxWallet, globalMaxSafety, globalMaxProfitCnt, globalMaxSafetyCnt, envMinCnt = 0, 0, 0, 0, 0
 	for _, strategy := range strategies {
 		strategy.show()
 	}
 }
 
 func (strategy Strategy) show() {
-	globalMaxWallet, globalMaxSafety, globalMaxProfitCnt, globalMaxSafetyCnt, envMinCnt = 0, 0, 0, 0, 0
 	candleData := strategy.getCandleData()
 	apiHandler.downloadPairCandles(candleData)
 	ind1 := candleData.getIndicatorValue(strategy.Ind1)
@@ -800,6 +800,7 @@ func prepareTestStrategies(envTestStrategies string) {
 	params[0] = params[0][1:]
 	params[len(params)-1] = params[len(params)-1][:len(params[len(params)-1])-1]
 
+	envMaxLoss = 1.0
 	for _, param := range params {
 		getStrategy(param).show()
 	}
