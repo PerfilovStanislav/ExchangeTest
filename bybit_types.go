@@ -1,36 +1,32 @@
 package main
 
 import (
-	"github.com/frankrap/bybit-api/rest"
+	bb "github.com/wuhewuhe/bybit.go.api"
+	"github.com/wuhewuhe/bybit.go.api/models"
 	"time"
 )
 
 type Bybit struct {
-	Key    string
-	Secret string
-	//AvailableDeposit float64
-	//Balance          CurrencyBalanceResponse
-	//OpenedOrder      OpenedOrder
-	//StopLossOrderId  int64
+	client *bb.Client
 }
 
-func (bybit Bybit) transform(c rest.OHLCLinear) Candle {
+func (bybit Bybit) transform(c *models.MarketKlineCandle) Candle {
 	return Candle{
-		c.Low,
-		c.Open,
-		c.Close,
-		c.High,
-		(c.Low + c.Open) * 0.5,
-		(c.Low + c.Close) * 0.5,
-		(c.Low + c.High) * 0.5,
-		(c.Open + c.Close) * 0.5,
-		(c.Open + c.High) * 0.5,
-		(c.Close + c.High) * 0.5,
-		(c.Low + c.Open + c.Close) / 3.0,
-		(c.Low + c.Open + c.High) / 3.0,
-		(c.Low + c.Close + c.High) / 3.0,
-		(c.Open + c.Close + c.High) / 3.0,
-		time.Unix(c.OpenTime, 0),
+		s2f(c.LowPrice),
+		s2f(c.OpenPrice),
+		s2f(c.ClosePrice),
+		s2f(c.HighPrice),
+		(s2f(c.LowPrice) + s2f(c.OpenPrice)) * 0.5,
+		(s2f(c.LowPrice) + s2f(c.ClosePrice)) * 0.5,
+		(s2f(c.LowPrice) + s2f(c.HighPrice)) * 0.5,
+		(s2f(c.OpenPrice) + s2f(c.ClosePrice)) * 0.5,
+		(s2f(c.OpenPrice) + s2f(c.HighPrice)) * 0.5,
+		(s2f(c.ClosePrice) + s2f(c.HighPrice)) * 0.5,
+		(s2f(c.LowPrice) + s2f(c.OpenPrice) + s2f(c.ClosePrice)) / 3.0,
+		(s2f(c.LowPrice) + s2f(c.OpenPrice) + s2f(c.HighPrice)) / 3.0,
+		(s2f(c.LowPrice) + s2f(c.ClosePrice) + s2f(c.HighPrice)) / 3.0,
+		(s2f(c.OpenPrice) + s2f(c.ClosePrice) + s2f(c.HighPrice)) / 3.0,
+		time.Unix(s2i(c.StartTime)/1000, 0),
 	}
 }
 

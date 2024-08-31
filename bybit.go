@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"github.com/frankrap/bybit-api/rest"
+	bb "github.com/wuhewuhe/bybit.go.api"
+	"github.com/wuhewuhe/bybit.go.api/models"
 	"log"
 	"os"
 	"strings"
@@ -11,27 +13,35 @@ import (
 
 var bybit Bybit
 
-const bybitBaseUrl = "https://api.bybit.com/" // "https://api-testnet.bybit.com/"
-
 func (bybit Bybit) init() Bybit {
-	bybit.Key = os.Getenv("bybit.key")
-	bybit.Secret = os.Getenv("bybit.secret")
+	key := os.Getenv("bybit.key")
+	secret := os.Getenv("bybit.secret")
+
+	bybit.client = bb.NewBybitHttpClient(key, secret, bb.WithBaseURL(bb.MAINNET))
+
 	return bybit
 }
 
 func (bybit Bybit) downloadPairCandles(candleData *CandleData) {
-	b := rest.New(nil, bybitBaseUrl, bybit.Key, bybit.Secret, false)
-
+	const limit = 1000
 	if candleData.restore() {
 		return
 	}
 
 	seconds := int64(toInt(resolution)) * 60
+	startDate := (time.Now().AddDate(-years, -months, -days).Unix()/seconds)*seconds + 1
 	endDate := (time.Now().Unix() / seconds) * seconds
-	startDate := (time.Now().AddDate(years, months, days).Unix()/seconds)*seconds + 1
+	symbol := strings.ReplaceAll(candleData.Pair, "_", "")
+
+	service := bybit.client.NewMarketKlineService()
+	service.Category(models.CategorySpot)
+	service.Symbol(symbol)
+	service.Interval("60")
+	service.Limit(limit)
 
 	for startDate < endDate {
-		_, _, candles, err := b.LinearGetKLine(strings.ReplaceAll(candleData.Pair, "_", ""), resolution, startDate, 200)
+		service.Start(uint64(startDate * 1000))
+		candles, err := service.Do(context.Background())
 		if err != nil {
 			log.Printf("%v", err)
 			return
@@ -39,16 +49,16 @@ func (bybit Bybit) downloadPairCandles(candleData *CandleData) {
 
 		fmt.Printf("%s +%d\n",
 			time.Unix(startDate, 0).Format("02.01.06 15:04"),
-			len(candles),
+			len(candles.List),
 		)
 
-		startDate += seconds * 200
+		startDate += seconds * limit
 
-		if len(candles) == 0 {
+		if len(candles.List) == 0 {
 			continue
 		}
-		for _, c := range candles {
-			candleData.upsertCandle(bybit.transform(c))
+		for i := len(candles.List) - 1; i >= 0; i-- {
+			candleData.upsertCandle(bybit.transform(candles.List[i]))
 		}
 		time.Sleep(time.Millisecond * time.Duration(50))
 	}

@@ -770,7 +770,7 @@ func prepareTestPairs(envTestPairs string) {
 		favoriteStrategies := getTestData(pair)
 		if !favoriteStrategies.restore() {
 			candleData.testPair()
-			tgBot.sendTestFile(favoriteStrategies.getFileName())
+			//tgBot.sendTestFile(favoriteStrategies.getFileName())
 		} else {
 			showStrategies(favoriteStrategies.StrategiesMaxSafety)
 			showStrategies(favoriteStrategies.StrategiesMaxWallet)

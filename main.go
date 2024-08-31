@@ -60,7 +60,7 @@ func init() {
 		opDif = int(s2i(tps[2]))
 	}
 
-	tgBot.init()
+	//tgBot.init()
 }
 
 func main() {
@@ -74,8 +74,8 @@ func main() {
 	//	}
 	//}()
 
-	envTestPairs := os.Getenv("testPairs")
-	envTestStrategies := os.Getenv("testStrategies")
+	envTestPairs := os.Getenv("test_pairs")
+	envTestStrategies := os.Getenv("test_strategies")
 
 	CandleStorage = make(map[string]CandleData)
 	FavoriteStrategyStorage = make(map[string]FavoriteStrategies)
