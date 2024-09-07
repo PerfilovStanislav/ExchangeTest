@@ -8,7 +8,6 @@ import (
 	_ "github.com/jackc/pgx"
 	_ "github.com/jackc/pgx/stdlib"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 	//_ "github.com/lib/pq"
@@ -25,13 +24,13 @@ var opMin, opMax, opDif int
 //var stat2 = make([]int, len(IndicatorTypes), len(IndicatorTypes))
 
 type FavoriteStrategies struct {
-	Pair                string
-	StrategiesMaxWallet []Strategy
-	//StrategiesMaxSpeed  []Strategy
+	Pair                   string
+	StrategiesMaxWallet    []Strategy
 	StrategiesMaxSafety    []Strategy
 	StrategiesMaxCnt       []Strategy
 	StrategiesMaxSafetyCnt []Strategy
 	CandleData             *CandleData
+	//StrategiesMaxSpeed  []Strategy
 }
 
 var TestBarTypes = []BarType{
@@ -84,11 +83,13 @@ func (favoriteStrategies *FavoriteStrategies) backup() {
 }
 
 func (favoriteStrategies *FavoriteStrategies) getFileName() string {
-	return fmt.Sprintf("%s_tests_%s_%s_%s.dat",
+	return fmt.Sprintf("%s_tests_%s_%s_%s__tp_%d-%d__op_%d-%d.dat",
 		exchange,
 		favoriteStrategies.Pair,
 		resolution,
 		os.Getenv("strategy_type"),
+		tpMin, tpMax,
+		opMin, opMax,
 	)
 }
 
@@ -142,8 +143,6 @@ func (candleData *CandleData) testPair() {
 	strategyFun := strategyType.getTestPairFunction(candleData)
 	testData := getTestData(candleData.Pair)
 
-	threads := toInt(os.Getenv("threads"))
-	proc := runtime.GOMAXPROCS(threads)
 	tasks := make(chan Strategy, 84)
 	ready := make(chan bool, threads)
 
@@ -153,7 +152,7 @@ func (candleData *CandleData) testPair() {
 	monthStartIndexes := [3]int{oneMonthAgoIndex, twoMonthsAgoIndex, threeMonthsAgoIndex}
 	maxTimeIndex := candleData.index()
 
-	for i := 0; i < proc; i++ {
+	for i := 0; i < threads; i++ {
 		go func(tasks <-chan Strategy, ready chan<- bool) {
 			for strategy := range tasks {
 				ind1 := candleData.getIndicatorValue(strategy.Ind1)
@@ -189,7 +188,7 @@ func (candleData *CandleData) testPair() {
 	}
 	close(tasks)
 
-	for i := 0; i < proc; i++ {
+	for i := 0; i < threads; i++ {
 		<-ready
 	}
 	close(ready)

@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -13,6 +14,8 @@ import (
 var apiHandler ApiInterface
 
 var resolution string
+
+var threads int
 
 const StartDeposit = float64(1000000.0)
 
@@ -45,20 +48,21 @@ func init() {
 	days = toInt(os.Getenv("days"))
 
 	{
-		envTp := os.Getenv("tp")
-		tps := strings.Split(envTp, ";")
-		tpMin = int(s2i(tps[0]))
-		tpMax = int(s2i(tps[1]))
-		tpDif = int(s2i(tps[2]))
+		params := strings.Split(os.Getenv("tp"), ";")
+		tpMin = int(s2i(params[0]))
+		tpMax = int(s2i(params[1]))
+		tpDif = int(s2i(params[2]))
 	}
 
 	{
-		envTp := os.Getenv("open")
-		tps := strings.Split(envTp, ";")
-		opMin = int(s2i(tps[0]))
-		opMax = int(s2i(tps[1]))
-		opDif = int(s2i(tps[2]))
+		params := strings.Split(os.Getenv("open"), ";")
+		opMin = int(s2i(params[0]))
+		opMax = int(s2i(params[1]))
+		opDif = int(s2i(params[2]))
 	}
+
+	threads = toInt(os.Getenv("threads"))
+	runtime.GOMAXPROCS(threads)
 
 	//tgBot.init()
 }
